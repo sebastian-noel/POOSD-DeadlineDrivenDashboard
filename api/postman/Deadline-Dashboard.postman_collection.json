@@ -1,0 +1,66 @@
+{
+  "info": {
+    "name": "Deadline Dashboard API demo",
+    "description": "Set baseUrl to the deployed domain. Register a fresh email, use the emailed verification token, then log in.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://api.example.com" },
+    { "key": "email", "value": "demo@example.com" },
+    { "key": "password", "value": "StrongPassword123!" },
+    { "key": "verificationToken", "value": "" },
+    { "key": "accessToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/health" }
+    },
+    {
+      "name": "Register",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}" },
+        "url": "{{baseUrl}}/api/v1/auth/register"
+      }
+    },
+    {
+      "name": "Verify email",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/auth/verify-email?token={{verificationToken}}" }
+    },
+    {
+      "name": "Login",
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "if (pm.response.code === 200) {",
+          "  pm.collectionVariables.set('accessToken', pm.response.json().accessToken);",
+          "}"
+        ] }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}" },
+        "url": "{{baseUrl}}/api/v1/auth/login"
+      }
+    },
+    {
+      "name": "My account",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{baseUrl}}/api/v1/me"
+      }
+    },
+    {
+      "name": "Partial search",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{baseUrl}}/api/v1/search?q=cap"
+      }
+    }
+  ]
+}

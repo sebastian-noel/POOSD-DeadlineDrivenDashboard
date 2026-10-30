@@ -6,8 +6,8 @@ const config = loadConfig()
 
 try {
   await mongoose.connect(config.MONGODB_URI)
-  createApp(config).listen(config.PORT, () => {
-    console.log(`API listening on port ${config.PORT}`)
+  createApp(config).listen(config.PORT, config.HOST, () => {
+    console.log(`API listening on ${config.HOST}:${config.PORT}`)
   })
 } catch (error) {
   console.error('Could not start API', error)

@@ -1,0 +1,408 @@
+openapi: 3.0.3
+info:
+  title: Deadline Driven Dashboard API
+  version: 1.0.0
+  description: REST API for user accounts, milestones, tasks, progress, and focus sessions.
+servers:
+  - url: https://api.example.com/api/v1
+    description: Replace with the deployed API domain before presenting in SwaggerHub.
+security:
+  - bearerAuth: []
+tags:
+  - name: Authentication
+  - name: Milestones
+  - name: Tasks
+  - name: Progress
+paths:
+  /health:
+    get:
+      summary: Check that the API is responding
+      security: []
+      responses:
+        '200':
+          description: API is running
+          content:
+            application/json:
+              example: { status: ok }
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a user and send an email verification link
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Credentials' }
+            example: { email: demo@example.com, password: StrongPassword123! }
+      responses:
+        '201':
+          description: Account created; email verification required before login
+          content:
+            application/json:
+              example: { id: 507f1f77bcf86cd799439011, email: demo@example.com, emailVerified: false }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409': { description: Email already registered }
+        '503': { description: Account created but verification email could not be sent }
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Log in a verified user and receive a JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Credentials' }
+            example: { email: demo@example.com, password: StrongPassword123! }
+      responses:
+        '200':
+          description: Login succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken: { type: string }
+                  tokenType: { type: string, example: Bearer }
+                  expiresIn: { type: integer, example: 3600 }
+                  user:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      email: { type: string, format: email }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { description: Invalid email or password }
+        '403': { description: Email has not been verified }
+  /auth/resend-verification:
+    post:
+      tags: [Authentication]
+      summary: Resend an email verification link
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailOnly' }
+      responses:
+        '202': { description: Request accepted }
+        '400': { $ref: '#/components/responses/ValidationError' }
+  /auth/verify-email:
+    get:
+      tags: [Authentication]
+      summary: Verify an email using the emailed token
+      security: []
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Email verified }
+        '400': { description: Invalid or expired token }
+  /auth/forgot-password:
+    post:
+      tags: [Authentication]
+      summary: Request a password reset email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailOnly' }
+      responses:
+        '202': { description: Request accepted regardless of whether account exists }
+        '400': { $ref: '#/components/responses/ValidationError' }
+  /auth/reset-password:
+    post:
+      tags: [Authentication]
+      summary: Reset password with emailed token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, minLength: 12, maxLength: 128 }
+      responses:
+        '200': { description: Password changed; existing JWTs are invalidated }
+        '400': { description: Invalid input or expired token }
+  /me:
+    get:
+      tags: [Authentication]
+      summary: Get the authenticated account
+      responses:
+        '200':
+          description: Account summary
+          content:
+            application/json:
+              example: { id: 507f1f77bcf86cd799439011, email: demo@example.com, displayName: Demo User }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [Authentication]
+      summary: Update your display name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [displayName]
+              properties:
+                displayName: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        '200': { description: Profile updated }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /milestones:
+    get:
+      tags: [Milestones]
+      summary: List your milestones
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { description: Paginated milestones }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Milestones]
+      summary: Create a milestone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MilestoneInput' }
+            example: { title: Finish capstone, description: Complete API demo, dueAt: '2026-11-15T17:00:00Z' }
+      responses:
+        '201': { description: Milestone created }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /milestones/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Milestones]
+      summary: Get one of your milestones
+      responses:
+        '200': { description: Milestone found }
+        '404': { description: Not found or not owned by caller }
+    patch:
+      tags: [Milestones]
+      summary: Update one of your milestones
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MilestonePatch' }
+      responses:
+        '200': { description: Milestone updated }
+        '404': { description: Not found or not owned by caller }
+    delete:
+      tags: [Milestones]
+      summary: Delete a milestone and its tasks
+      responses:
+        '204': { description: Deleted }
+        '404': { description: Not found or not owned by caller }
+  /tasks:
+    get:
+      tags: [Tasks]
+      summary: List your tasks
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - in: query
+          name: milestoneId
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string, enum: [todo, in_progress, done] }
+      responses:
+        '200': { description: Paginated tasks }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Tasks]
+      summary: Create a task under one of your milestones
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskInput' }
+      responses:
+        '201': { description: Task created }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { description: Milestone not found or not owned by caller }
+  /tasks/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Tasks]
+      summary: Get one of your tasks
+      responses:
+        '200': { description: Task found }
+        '404': { description: Not found or not owned by caller }
+    patch:
+      tags: [Tasks]
+      summary: Update one of your tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskPatch' }
+      responses:
+        '200': { description: Task updated }
+        '404': { description: Not found or not owned by caller }
+    delete:
+      tags: [Tasks]
+      summary: Delete one of your tasks
+      responses:
+        '204': { description: Deleted }
+        '404': { description: Not found or not owned by caller }
+  /search:
+    get:
+      tags: [Tasks]
+      summary: Server-side, case-insensitive partial title search
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string, minLength: 2, maxLength: 100 }
+          example: cap
+      responses:
+        '200': { description: Matching milestones and tasks belonging to the caller }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /dashboard:
+    get:
+      tags: [Progress]
+      summary: Get task counts, milestone progress, upcoming work, and focus minutes
+      responses:
+        '200': { description: Dashboard summary for the caller }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /focus-sessions:
+    get:
+      tags: [Progress]
+      summary: List your focus sessions
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { description: Paginated sessions }
+    post:
+      tags: [Progress]
+      summary: Start a focus session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetSeconds]
+              properties:
+                taskId: { type: string, nullable: true }
+                targetSeconds: { type: integer, minimum: 60, maximum: 14400 }
+      responses:
+        '201': { description: Session started }
+        '409': { description: An active session already exists }
+  /focus-sessions/active:
+    get:
+      tags: [Progress]
+      summary: Get your running or paused session
+      responses:
+        '200': { description: Active session or null }
+  /focus-sessions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Progress]
+      summary: Pause, resume, complete, or cancel a focus session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [pause, resume, complete, cancel] }
+      responses:
+        '200': { description: Session updated }
+        '409': { description: Invalid state transition }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+    Page:
+      in: query
+      name: page
+      schema: { type: integer, minimum: 1, default: 1 }
+    Limit:
+      in: query
+      name: limit
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+  responses:
+    ValidationError:
+      description: Invalid request data
+      content:
+        application/json:
+          example: { error: VALIDATION_ERROR }
+    Unauthorized:
+      description: Missing or invalid JWT
+      content:
+        application/json:
+          example: { error: UNAUTHORIZED }
+  schemas:
+    Credentials:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 12, maxLength: 128 }
+    EmailOnly:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    MilestoneInput:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, maxLength: 2000 }
+        dueAt: { type: string, format: date-time, nullable: true }
+    MilestonePatch:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, maxLength: 2000 }
+        dueAt: { type: string, format: date-time, nullable: true }
+    TaskInput:
+      type: object
+      required: [milestoneId, title]
+      properties:
+        milestoneId: { type: string }
+        title: { type: string, minLength: 1, maxLength: 120 }
+        notes: { type: string, maxLength: 2000 }
+        dueAt: { type: string, format: date-time, nullable: true }
+        status: { type: string, enum: [todo, in_progress, done] }
+    TaskPatch:
+      type: object
+      minProperties: 1
+      properties:
+        milestoneId: { type: string }
+        title: { type: string, minLength: 1, maxLength: 120 }
+        notes: { type: string, maxLength: 2000 }
+        dueAt: { type: string, format: date-time, nullable: true }
+        status: { type: string, enum: [todo, in_progress, done] }

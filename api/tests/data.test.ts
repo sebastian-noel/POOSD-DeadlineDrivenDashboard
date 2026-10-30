@@ -11,6 +11,7 @@ import { FocusSession } from '../src/models/focus-session.js'
 
 const config: Config = {
   PORT: 3001,
+  HOST: '127.0.0.1',
   MONGODB_URI: 'unused',
   JWT_SECRET: 'test-secret-must-be-at-least-32-characters-long',
   API_PUBLIC_URL: 'https://api.example.com',
