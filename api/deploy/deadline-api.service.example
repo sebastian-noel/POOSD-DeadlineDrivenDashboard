@@ -1,0 +1,17 @@
+[Unit]
+Description=Deadline Driven Dashboard API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__DEPLOY_USER__
+WorkingDirectory=__PROJECT_DIR__/api
+Environment=NODE_ENV=production
+EnvironmentFile=__PROJECT_DIR__/api/.env
+ExecStart=__NODE_PATH__ __PROJECT_DIR__/api/dist/index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

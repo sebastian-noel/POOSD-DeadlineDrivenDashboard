@@ -63,6 +63,7 @@ async function request(path: string, method = 'GET', body?: object, token?: stri
 }
 
 test('register, verify, login, and reset password', async () => {
+  assert.equal((await request('/api/v1/health')).status, 200)
   const email = 'test@example.com'
   const password = 'very-long-password-123'
   const registration = await request('/api/v1/auth/register', 'POST', { email, password })
