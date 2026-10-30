@@ -13,6 +13,8 @@ The project requirements call for a remote Express API, remote MongoDB, a domain
 
 The server must be reachable over HTTPS. If registration returns `503 EMAIL_UNAVAILABLE`, the account was created but SMTP failed; fix SMTP and call `/api/v1/auth/resend-verification`.
 
+Example systemd and Nginx files are in `api/deploy/`. Replace their `__PLACEHOLDER__` values with the actual server username, project directory, Node path (`command -v node`), and API domain. Enable the service only after `.env` is set. Configure HTTPS with the server's certificate manager; for Ubuntu/Nginx, Certbot can obtain and install a certificate and test renewal.
+
 ## Lab demonstration with Postman or ARC
 
 1. Log in to the server with PuTTY or your preferred SSH client. Show `api/src/routes/auth.ts`, `api/src/models/user.ts`, and `api/src/index.ts` using `vi`, `less`, or your preferred editor.

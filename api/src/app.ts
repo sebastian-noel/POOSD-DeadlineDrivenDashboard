@@ -12,6 +12,7 @@ import { searchRoutes } from './routes/search.js'
 import { dashboardRoutes } from './routes/dashboard.js'
 import { focusSessionRoutes } from './routes/focus-sessions.js'
 import { User } from './models/user.js'
+import mongoose from 'mongoose'
 
 export function createApp(config: Config, mailer: Mailer = createMailer(config)) {
   const app = express()
@@ -22,6 +23,10 @@ export function createApp(config: Config, mailer: Mailer = createMailer(config))
   app.use(express.json({ limit: '32kb' }))
 
   app.get('/api/v1/health', (_req, res) => {
+    if (mongoose.connection.readyState !== 1) {
+      res.status(503).json({ status: 'unavailable' })
+      return
+    }
     res.json({ status: 'ok' })
   })
 
