@@ -24,6 +24,7 @@ export function requireAuth(config: Config): RequestHandler {
       }
       req.userId = user.id as string
       req.userEmail = user.email
+      req.userDisplayName = user.displayName
       next()
     } catch {
       res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid or expired token' })

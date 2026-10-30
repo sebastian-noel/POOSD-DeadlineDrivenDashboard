@@ -2,6 +2,7 @@ import { Schema, model } from 'mongoose'
 
 export interface UserRecord {
   email: string
+  displayName: string
   passwordHash: string
   emailVerifiedAt: Date | null
   verificationTokenHash: string | null
@@ -14,6 +15,7 @@ export interface UserRecord {
 const userSchema = new Schema<UserRecord>(
   {
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    displayName: { type: String, default: '', maxlength: 80 },
     passwordHash: { type: String, required: true },
     emailVerifiedAt: { type: Date, default: null },
     verificationTokenHash: { type: String, default: null },

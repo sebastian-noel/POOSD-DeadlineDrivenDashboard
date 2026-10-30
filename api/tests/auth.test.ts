@@ -10,6 +10,7 @@ import { User } from '../src/models/user.js'
 
 const config: Config = {
   PORT: 3001,
+  HOST: '127.0.0.1',
   MONGODB_URI: 'unused',
   JWT_SECRET: 'test-secret-must-be-at-least-32-characters-long',
   API_PUBLIC_URL: 'https://api.example.com',
@@ -81,6 +82,9 @@ test('register, verify, login, and reset password', async () => {
   assert.equal(login.data.tokenType, 'Bearer')
   const accessToken = login.data.accessToken as string
   assert.equal((await request('/api/v1/me', 'GET', undefined, accessToken)).status, 200)
+  const profile = await request('/api/v1/me', 'PATCH', { displayName: 'Demo User' }, accessToken)
+  assert.equal(profile.status, 200)
+  assert.equal(profile.data.displayName, 'Demo User')
 
   assert.equal((await request('/api/v1/auth/forgot-password', 'POST', { email })).status, 202)
   assert.equal((await request('/api/v1/auth/reset-password', 'POST', { token: resetToken, password: 'new-long-password-123' })).status, 200)
