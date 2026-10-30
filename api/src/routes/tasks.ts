@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { dueAtSchema, limitSchema, objectIdSchema, pageSchema } from '../lib/route-helpers.js'
 import { Milestone } from '../models/milestone.js'
 import { Task } from '../models/task.js'
+import { FocusSession } from '../models/focus-session.js'
 
 const statusSchema = z.enum(['todo', 'in_progress', 'done'])
 const createSchema = z.object({
@@ -118,6 +119,7 @@ export function taskRoutes() {
       res.status(404).json({ error: 'NOT_FOUND' })
       return
     }
+    await FocusSession.updateMany({ owner: req.userId, task: item._id }, { $set: { task: null } })
     res.status(204).end()
   })
 

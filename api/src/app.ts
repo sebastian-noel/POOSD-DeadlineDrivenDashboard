@@ -8,6 +8,8 @@ import { authRoutes } from './routes/auth.js'
 import { milestoneRoutes } from './routes/milestones.js'
 import { taskRoutes } from './routes/tasks.js'
 import { searchRoutes } from './routes/search.js'
+import { dashboardRoutes } from './routes/dashboard.js'
+import { focusSessionRoutes } from './routes/focus-sessions.js'
 
 export function createApp(config: Config, mailer: Mailer = createMailer(config)) {
   const app = express()
@@ -27,10 +29,16 @@ export function createApp(config: Config, mailer: Mailer = createMailer(config))
   app.use('/api/v1/milestones', requireAuth(config), milestoneRoutes())
   app.use('/api/v1/tasks', requireAuth(config), taskRoutes())
   app.use('/api/v1/search', requireAuth(config), searchRoutes())
+  app.use('/api/v1/dashboard', requireAuth(config), dashboardRoutes())
+  app.use('/api/v1/focus-sessions', requireAuth(config), focusSessionRoutes())
 
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (typeof error === 'object' && error && 'code' in error && error.code === 11000) {
-      res.status(409).json({ error: 'EMAIL_IN_USE' })
+      res.status(409).json({ error: 'CONFLICT' })
+      return
+    }
+    if (typeof error === 'object' && error && 'name' in error && error.name === 'VersionError') {
+      res.status(409).json({ error: 'CONFLICT' })
       return
     }
     console.error(error)
