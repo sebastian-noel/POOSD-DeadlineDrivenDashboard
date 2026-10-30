@@ -5,6 +5,9 @@ import type { Config } from './config.js'
 import { requireAuth } from './lib/auth.js'
 import { createMailer, type Mailer } from './lib/mailer.js'
 import { authRoutes } from './routes/auth.js'
+import { milestoneRoutes } from './routes/milestones.js'
+import { taskRoutes } from './routes/tasks.js'
+import { searchRoutes } from './routes/search.js'
 
 export function createApp(config: Config, mailer: Mailer = createMailer(config)) {
   const app = express()
@@ -21,6 +24,9 @@ export function createApp(config: Config, mailer: Mailer = createMailer(config))
   app.get('/api/v1/me', requireAuth(config), (req, res) => {
     res.json({ id: req.userId, email: req.userEmail })
   })
+  app.use('/api/v1/milestones', requireAuth(config), milestoneRoutes())
+  app.use('/api/v1/tasks', requireAuth(config), taskRoutes())
+  app.use('/api/v1/search', requireAuth(config), searchRoutes())
 
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (typeof error === 'object' && error && 'code' in error && error.code === 11000) {
