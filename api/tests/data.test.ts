@@ -7,6 +7,7 @@ import { createApp } from '../src/app.js'
 import type { Config } from '../src/config.js'
 import type { Mailer } from '../src/lib/mailer.js'
 import { User } from '../src/models/user.js'
+import { FocusSession } from '../src/models/focus-session.js'
 
 const config: Config = {
   PORT: 3001,
@@ -35,6 +36,7 @@ before(async () => {
   mongo = await MongoMemoryServer.create()
   await mongoose.connect(mongo.getUri())
   await User.init()
+  await FocusSession.init()
   server = createApp(config, mailer).listen(0)
   await new Promise<void>((resolve) => server.once('listening', resolve))
   const address = server.address()
@@ -89,9 +91,24 @@ test('milestones, tasks, and partial search stay scoped to their owner', async (
   assert.equal((await request('/api/v1/search?q=api%20end', 'GET')).status, 401)
   assert.equal((await request('/api/v1/search?q=.%2A', 'GET', undefined, alice)).data.tasks.length, 0)
 
+  const initialDashboard = await request('/api/v1/dashboard', 'GET', undefined, alice)
+  assert.equal(initialDashboard.status, 200)
+  assert.equal(initialDashboard.data.milestones[0].progressPercent, 0)
+  assert.equal((await request('/api/v1/dashboard', 'GET', undefined, bob)).data.milestones.length, 0)
+
+  const focus = await request('/api/v1/focus-sessions', 'POST', { taskId: task.data.id, targetSeconds: 1500 }, alice)
+  assert.equal(focus.status, 201)
+  assert.equal((await request('/api/v1/focus-sessions', 'POST', { targetSeconds: 1500 }, alice)).status, 409)
+  assert.equal((await request(`/api/v1/focus-sessions/${focus.data.id}`, 'PATCH', { action: 'pause' }, bob)).status, 404)
+  assert.equal((await request(`/api/v1/focus-sessions/${focus.data.id}`, 'PATCH', { action: 'pause' }, alice)).data.status, 'paused')
+  assert.equal((await request(`/api/v1/focus-sessions/${focus.data.id}`, 'PATCH', { action: 'resume' }, alice)).data.status, 'running')
+  assert.equal((await request(`/api/v1/focus-sessions/${focus.data.id}`, 'PATCH', { action: 'complete' }, alice)).data.status, 'completed')
+  assert.equal((await request('/api/v1/focus-sessions/active', 'GET', undefined, alice)).data.session, null)
+
   const completed = await request(`/api/v1/tasks/${task.data.id}`, 'PATCH', { status: 'done' }, alice)
   assert.equal(completed.status, 200)
   assert(completed.data.completedAt)
+  assert.equal((await request('/api/v1/dashboard', 'GET', undefined, alice)).data.milestones[0].progressPercent, 100)
   assert.equal((await request(`/api/v1/tasks/${task.data.id}`, 'DELETE', undefined, bob)).status, 404)
   assert.equal((await request(`/api/v1/milestones/${milestoneId}`, 'DELETE', undefined, alice)).status, 204)
   assert.equal((await request(`/api/v1/tasks/${task.data.id}`, 'GET', undefined, alice)).status, 404)

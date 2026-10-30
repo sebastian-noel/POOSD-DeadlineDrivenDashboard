@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { dueAtSchema, limitSchema, objectIdSchema, pageSchema } from '../lib/route-helpers.js'
 import { Milestone } from '../models/milestone.js'
 import { Task } from '../models/task.js'
+import { FocusSession } from '../models/focus-session.js'
 
 const createSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -90,6 +91,8 @@ export function milestoneRoutes() {
       res.status(404).json({ error: 'NOT_FOUND' })
       return
     }
+    const tasks = await Task.find({ owner: req.userId, milestone: item._id }).select('_id')
+    await FocusSession.updateMany({ owner: req.userId, task: { $in: tasks.map((task) => task._id) } }, { $set: { task: null } })
     await Task.deleteMany({ owner: req.userId, milestone: item._id })
     res.status(204).end()
   })
