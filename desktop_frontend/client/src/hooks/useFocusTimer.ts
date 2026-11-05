@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FOCUS_PLAN } from '../data/mockData';
+import { FOCUS_PLAN } from '../data/preferences';
 import type { TimerMode } from '../types';
 
 export function durationOf(mode: TimerMode): number {
@@ -18,52 +18,57 @@ export function formatTime(totalSeconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+interface TimerState {
+  mode: TimerMode;
+  remaining: number;
+  completedSessions: number;
+}
+
+/** One second passes. When a block ends, move straight to the next one: a break after focus, focus after a break. */
+function tick(state: TimerState): TimerState {
+  if (state.remaining > 1) return { ...state, remaining: state.remaining - 1 };
+  if (state.mode === 'focus') {
+    const done = state.completedSessions + 1;
+    const next: TimerMode = done % FOCUS_PLAN.longBreakAfterSessions === 0 ? 'long' : 'short';
+    return { mode: next, remaining: durationOf(next), completedSessions: done };
+  }
+  return { ...state, mode: 'focus', remaining: durationOf('focus') };
+}
+
 /**
  * Pomodoro timer logic: focus blocks, a short break after each, and a long break
  * after every `longBreakAfterSessions` focus blocks. Each component that calls this
  * gets its own timer; nothing is shared between pages yet.
  */
 export function useFocusTimer() {
-  const [mode, setMode] = useState<TimerMode>('focus');
-  const [remaining, setRemaining] = useState(() => durationOf('focus'));
+  const [state, setState] = useState<TimerState>(() => ({
+    mode: 'focus',
+    remaining: durationOf('focus'),
+    completedSessions: 0,
+  }));
   const [running, setRunning] = useState(false);
-  const [completedSessions, setCompletedSessions] = useState(0);
 
+  const { mode, remaining, completedSessions } = state;
   const duration = durationOf(mode);
   const sessionsPerDay = FOCUS_PLAN.longBreakAfterSessions;
 
   useEffect(() => {
     if (!running) return;
-    const id = window.setInterval(() => setRemaining((r) => Math.max(0, r - 1)), 1000);
+    const id = window.setInterval(() => setState(tick), 1000);
     return () => window.clearInterval(id);
   }, [running]);
-
-  useEffect(() => {
-    if (remaining > 0) return;
-    if (mode === 'focus') {
-      const done = completedSessions + 1;
-      const next: TimerMode = done % FOCUS_PLAN.longBreakAfterSessions === 0 ? 'long' : 'short';
-      setCompletedSessions(done);
-      setMode(next);
-      setRemaining(durationOf(next));
-    } else {
-      setMode('focus');
-      setRemaining(durationOf('focus'));
-    }
-  }, [remaining, mode, completedSessions]);
 
   const toggle = () => setRunning((r) => !r);
 
   const reset = () => {
     setRunning(false);
-    setRemaining(duration);
+    setState((s) => ({ ...s, remaining: durationOf(s.mode) }));
   };
 
   /** Jump straight to a mode (the Focus / Short break / Long break tabs). */
   const selectMode = (next: TimerMode) => {
     setRunning(false);
-    setMode(next);
-    setRemaining(durationOf(next));
+    setState((s) => ({ ...s, mode: next, remaining: durationOf(next) }));
   };
 
   const sessionLabel =

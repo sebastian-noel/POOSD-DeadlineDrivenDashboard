@@ -4,7 +4,7 @@ import { SessionDots, TimerControls, TimerRing, WorkingOn } from '../../componen
 import { NotificationsMenu } from '../../components/NotificationsMenu';
 import { PageHeader } from '../../components/PageHeader';
 import { SearchPill } from '../../components/SearchPill';
-import { FOCUS_PLAN, recentSessions } from '../../data/mockData';
+import { FOCUS_PLAN, sampleRecentSessions } from '../../data/preferences';
 import { useFocusTimer } from '../../hooks/useFocusTimer';
 import type { Notification, Task, TimerMode } from '../../types';
 
@@ -140,7 +140,7 @@ export function FocusTimerPage({
               Recent sessions
             </h2>
             <ul className="recent-sessions list-unstyled m-0">
-              {recentSessions.map((s) => (
+              {sampleRecentSessions.map((s) => (
                 <li key={s.id} className="d-flex align-items-center justify-content-between gap-3">
                   <div className="d-flex flex-column" style={{ gap: 2, minWidth: 0 }}>
                     <span className="t-body-bold text-truncate">{s.title}</span>

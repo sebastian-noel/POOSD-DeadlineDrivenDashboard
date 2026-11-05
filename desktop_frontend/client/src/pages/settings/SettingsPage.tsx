@@ -7,7 +7,7 @@ import {
   REMINDER_OPTIONS,
   TIME_ZONE_OPTIONS,
   WEEK_START_OPTIONS,
-} from '../../data/mockData';
+} from '../../data/preferences';
 import type { Notification, UserSettings } from '../../types';
 import { NumberField, SelectField, SettingsCard, SwitchRow, TextField } from './SettingsFields';
 

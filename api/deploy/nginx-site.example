@@ -1,13 +1,24 @@
+# One domain for both parts: nginx serves the built React app and proxies /api to the Node API.
+# Replace __APP_DOMAIN__ and __PROJECT_DIR__, copy to /etc/nginx/sites-available/, enable it,
+# run `nginx -t && systemctl reload nginx`, then `certbot --nginx -d __APP_DOMAIN__` for HTTPS.
 server {
     listen 80;
-    server_name __API_DOMAIN__;
+    server_name __APP_DOMAIN__;
 
-    location / {
+    root __PROJECT_DIR__/desktop_frontend/client/dist;
+    index index.html;
+
+    location /api/ {
         proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Single-page app: unknown paths fall back to index.html
+    location / {
+        try_files $uri /index.html;
     }
 }

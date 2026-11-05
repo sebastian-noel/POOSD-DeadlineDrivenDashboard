@@ -1,0 +1,14 @@
+# Local MongoDB for development only. The hosted app uses MongoDB Atlas (see README).
+#   docker compose up -d        # start
+#   docker compose down         # stop (data is kept in the volume)
+services:
+  mongo:
+    image: mongo:7
+    container_name: erm-actually-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:

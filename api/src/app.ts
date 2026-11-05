@@ -5,7 +5,9 @@ import type { Config } from './config.js'
 import { z } from 'zod'
 import { requireAuth } from './lib/auth.js'
 import { createMailer, type Mailer } from './lib/mailer.js'
+import { validationError } from './lib/route-helpers.js'
 import { authRoutes } from './routes/auth.js'
+import { contactRoutes } from './routes/contact.js'
 import { milestoneRoutes } from './routes/milestones.js'
 import { taskRoutes } from './routes/tasks.js'
 import { searchRoutes } from './routes/search.js'
@@ -31,13 +33,14 @@ export function createApp(config: Config, mailer: Mailer = createMailer(config))
   })
 
   app.use('/api/v1/auth', authRoutes(config, mailer))
+  app.use('/api/v1/contact', contactRoutes(mailer))
   app.get('/api/v1/me', requireAuth(config), (req, res) => {
     res.json({ id: req.userId, email: req.userEmail, displayName: req.userDisplayName })
   })
   app.patch('/api/v1/me', requireAuth(config), async (req, res) => {
     const parsed = z.object({ displayName: z.string().trim().min(1).max(80) }).strict().safeParse(req.body)
     if (!parsed.success) {
-      res.status(400).json({ error: 'VALIDATION_ERROR', details: parsed.error.flatten() })
+      validationError(res, parsed.error)
       return
     }
     const user = await User.findByIdAndUpdate(req.userId, { $set: parsed.data }, { new: true, runValidators: true })
@@ -49,7 +52,15 @@ export function createApp(config: Config, mailer: Mailer = createMailer(config))
   app.use('/api/v1/dashboard', requireAuth(config), dashboardRoutes())
   app.use('/api/v1/focus-sessions', requireAuth(config), focusSessionRoutes())
 
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'No such API route' })
+  })
+
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (typeof error === 'object' && error && 'type' in error && error.type === 'entity.parse.failed') {
+      res.status(400).json({ error: 'INVALID_JSON', message: 'Request body must be valid JSON' })
+      return
+    }
     if (typeof error === 'object' && error && 'code' in error && error.code === 11000) {
       res.status(409).json({ error: 'CONFLICT' })
       return

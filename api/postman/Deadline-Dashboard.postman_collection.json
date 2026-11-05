@@ -1,15 +1,17 @@
 {
   "info": {
-    "name": "Deadline Dashboard API demo",
-    "description": "Set baseUrl to the deployed domain. Register a fresh email, use the emailed verification token, then log in.",
+    "name": "Erm Actually API demo",
+    "description": "Set baseUrl to the deployed domain (https://<domain>). Register a fresh email, open the emailed verification link (or paste its token into verificationToken and run Verify email), then Login. Login stores the JWT for the protected requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "https://api.example.com" },
+    { "key": "baseUrl", "value": "https://app.example.com" },
     { "key": "email", "value": "demo@example.com" },
-    { "key": "password", "value": "StrongPassword123!" },
+    { "key": "password", "value": "StrongPassword123" },
     { "key": "verificationToken", "value": "" },
-    { "key": "accessToken", "value": "" }
+    { "key": "resetToken", "value": "" },
+    { "key": "accessToken", "value": "" },
+    { "key": "milestoneId", "value": "" }
   ],
   "item": [
     {
@@ -55,11 +57,78 @@
       }
     },
     {
+      "name": "Create milestone",
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "if (pm.response.code === 201) {",
+          "  pm.collectionVariables.set('milestoneId', pm.response.json().id);",
+          "}"
+        ] }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Finish capstone\",\n  \"dueAt\": \"2026-12-04T17:00:00Z\"\n}" },
+        "url": "{{baseUrl}}/api/v1/milestones"
+      }
+    },
+    {
+      "name": "Create task",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"milestoneId\": \"{{milestoneId}}\",\n  \"title\": \"Write API endpoints\",\n  \"dueAt\": \"2026-11-20T23:59:00Z\"\n}" },
+        "url": "{{baseUrl}}/api/v1/tasks"
+      }
+    },
+    {
       "name": "Partial search",
       "request": {
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-        "url": "{{baseUrl}}/api/v1/search?q=cap"
+        "url": "{{baseUrl}}/api/v1/search?q=api end"
+      }
+    },
+    {
+      "name": "Dashboard",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{baseUrl}}/api/v1/dashboard"
+      }
+    },
+    {
+      "name": "Forgot password",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\"\n}" },
+        "url": "{{baseUrl}}/api/v1/auth/forgot-password"
+      }
+    },
+    {
+      "name": "Reset password",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"password\": \"{{password}}\"\n}" },
+        "url": "{{baseUrl}}/api/v1/auth/reset-password"
+      }
+    },
+    {
+      "name": "Contact form",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"subject\": \"Hello\",\n  \"message\": \"Love the cat.\"\n}" },
+        "url": "{{baseUrl}}/api/v1/contact"
       }
     }
   ]
