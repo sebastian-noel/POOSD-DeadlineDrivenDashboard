@@ -2,6 +2,8 @@
 
 This is for the teammate taking over hosting. The code is done and the server is mostly set up; what is left is about an hour of account setup and checks. Work top to bottom and do not skip a check.
 
+> Using an AI agent (Claude Code, Codex, …) to do it? Point it at [`agent-hosting-brief.md`](agent-hosting-brief.md) — the same steps written as checkable tasks with guardrails.
+
 **Target:** `https://ermactually.kirugames.com` — web app + API on one domain, MongoDB Atlas, real email.
 
 ## Where things stand
