@@ -1,12 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Spinner } from 'react-bootstrap';
+import type { DashboardData } from '../../hooks/useDashboardData';
+import { dashboardApi, type ApiUser } from '../../lib/api';
 import {
-  TASKS_DONE_BEFORE_TODAY,
-  TODAY_LABEL,
-  USER_NAME,
-  deadlines,
-  milestones,
-} from '../../data/mockData';
-import type { DeadlineRange, Notification, Page, Task } from '../../types';
+  MILESTONE_DEADLINE_PREFIX,
+  buildNotifications,
+  buildStats,
+  milestoneTitles,
+  toDeadlines,
+  toUiMilestones,
+  toUiTasks,
+} from '../../lib/dashboardModel';
+import { todayLabel } from '../../lib/dates';
+import type { DeadlineRange, Page } from '../../types';
 import { DeadlinesCard } from './DeadlinesCard';
 import { FocusTimer } from './FocusTimer';
 import { Greeting } from './Greeting';
@@ -20,19 +26,22 @@ const RANGE_MAX_DAYS: Record<DeadlineRange, number> = {
   all: Infinity,
 };
 
-const TASKS_DONE_LAST_WEEK = 8;
+/** The API needs at least this many characters before it searches. */
+const MIN_SEARCH_LENGTH = 2;
+const SEARCH_DEBOUNCE_MS = 250;
 
-function matches(query: string, ...fields: string[]): boolean {
-  if (!query) return true;
-  const q = query.toLowerCase();
-  return fields.some((f) => f.toLowerCase().includes(q));
+interface SearchMatch {
+  query: string;
+  taskIds: Set<string>;
+  milestoneIds: Set<string>;
 }
 
 interface DashboardPageProps {
-  tasks: Task[];
-  onToggleTask: (id: string) => void;
+  user: ApiUser;
+  data: DashboardData;
   onNewTask: () => void;
-  notifications: Notification[];
+  /** Ids of notifications the user has cleared. */
+  dismissedNotificationIds: ReadonlySet<string>;
   onDismissNotification: (id: string) => void;
   hasUnread: boolean;
   onOpenNotifications: () => void;
@@ -40,10 +49,10 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({
-  tasks,
-  onToggleTask,
+  user,
+  data,
   onNewTask,
-  notifications,
+  dismissedNotificationIds,
   onDismissNotification,
   hasUnread,
   onOpenNotifications,
@@ -51,52 +60,113 @@ export function DashboardPage({
 }: DashboardPageProps) {
   const [search, setSearch] = useState('');
   const [range, setRange] = useState<DeadlineRange>('three-weeks');
+  const [match, setMatch] = useState<SearchMatch | null>(null);
 
   const query = search.trim();
 
-  const visibleDeadlines = useMemo(
-    () => deadlines.filter((d) => d.daysUntil <= RANGE_MAX_DAYS[range] && matches(query, d.title, d.context)),
-    [range, query],
+  // Search is done by the server (partial, case-insensitive title match), debounced while typing.
+  useEffect(() => {
+    if (query.length < MIN_SEARCH_LENGTH) return;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        const results = await dashboardApi.search(query);
+        if (cancelled) return;
+        setMatch({
+          query,
+          taskIds: new Set(results.tasks.map((t) => t.id)),
+          milestoneIds: new Set(results.milestones.map((m) => m.id)),
+        });
+      } catch {
+        /* keep showing the previous results while typing continues */
+      }
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query]);
+
+  const activeMatch = query.length >= MIN_SEARCH_LENGTH ? match : null;
+
+  const titles = useMemo(() => milestoneTitles(data.milestones), [data.milestones]);
+  const tasks = useMemo(() => toUiTasks(data.tasks, titles), [data.tasks, titles]);
+  const milestones = useMemo(() => toUiMilestones(data.summary?.milestones ?? []), [data.summary]);
+  const deadlines = useMemo(() => toDeadlines(data.tasks, data.summary?.milestones ?? [], titles), [data.tasks, data.summary, titles]);
+  const notifications = useMemo(
+    () => buildNotifications(deadlines, milestones).filter((n) => !dismissedNotificationIds.has(n.id)),
+    [deadlines, milestones, dismissedNotificationIds],
   );
-  const visibleMilestones = useMemo(() => milestones.filter((m) => matches(query, m.title, m.detail)), [query]);
-  const visibleTasks = useMemo(() => tasks.filter((t) => matches(query, t.label, t.tag)), [tasks, query]);
+  const stats = useMemo(() => (data.summary ? buildStats(data.tasks, milestones, data.summary) : null), [data.tasks, milestones, data.summary]);
+
+  const visibleTasks = activeMatch ? tasks.filter((t) => activeMatch.taskIds.has(t.id)) : tasks;
+  const visibleMilestones = activeMatch ? milestones.filter((m) => activeMatch.milestoneIds.has(m.id)) : milestones;
+  const visibleDeadlines = deadlines.filter((d) => {
+    if (d.daysUntil > RANGE_MAX_DAYS[range]) return false;
+    if (!activeMatch) return true;
+    return d.id.startsWith(MILESTONE_DEADLINE_PREFIX)
+      ? activeMatch.milestoneIds.has(d.id.slice(MILESTONE_DEADLINE_PREFIX.length))
+      : activeMatch.taskIds.has(d.id);
+  });
 
   const doneCount = tasks.filter((t) => t.done).length;
-  const doneThisWeek = TASKS_DONE_BEFORE_TODAY + doneCount;
-  const vsLastWeek = doneThisWeek - TASKS_DONE_LAST_WEEK;
   const currentTask = tasks.find((t) => !t.done);
   const upcomingThisWeek = deadlines.filter((d) => d.daysUntil <= 7).length;
+  const userName = user.displayName || user.email.split('@')[0] || 'there';
+
+  if (!data.summary || !stats) {
+    return (
+      <section className="panel d-flex flex-column align-items-center justify-content-center text-center gap-3 py-5">
+        {data.error ? (
+          <>
+            <h1 className="t-heading m-0">Couldn’t load your dashboard</h1>
+            <p className="t-body text-ink-secondary m-0">{data.error}</p>
+            <button type="button" className="btn-pill btn-pill-ink mt-2" onClick={() => void data.refresh()}>
+              Try again
+            </button>
+          </>
+        ) : (
+          <>
+            <Spinner animation="border" />
+            <p className="t-body text-ink-secondary m-0">Loading your dashboard…</p>
+          </>
+        )}
+      </section>
+    );
+  }
 
   return (
     <>
       <Greeting
-        userName={USER_NAME}
-        dateLabel={TODAY_LABEL}
+        userName={userName}
+        dateLabel={todayLabel()}
         upcomingThisWeek={upcomingThisWeek}
         search={search}
         onSearchChange={setSearch}
         notifications={notifications}
         onDismissNotification={onDismissNotification}
-        hasUnread={hasUnread}
+        hasUnread={hasUnread && notifications.length > 0}
         onOpenNotifications={onOpenNotifications}
         onNewTask={onNewTask}
       />
 
+      {data.error && <div className="alert alert-danger t-caption py-2 m-0">{data.error}</div>}
+
       <div className="row g-4">
         <div className="col-12 col-sm-6 col-xl-3">
-          <StatCard label="Due this week" value="7 tasks" note="2 due tomorrow" icon="clock" />
+          <StatCard label="Due this week" value={`${stats.dueThisWeek} task${stats.dueThisWeek === 1 ? '' : 's'}`} note={stats.dueThisWeekNote} icon="clock" />
         </div>
         <div className="col-12 col-sm-6 col-xl-3">
-          <StatCard label="Milestones on track" value="4 of 5" note="1 milestone at risk" icon="flag-stat" />
+          <StatCard label="Milestones on track" value={stats.milestonesOnTrack} note={stats.milestonesNote} icon="flag-stat" />
         </div>
         <div className="col-12 col-sm-6 col-xl-3">
-          <StatCard label="Focus time this week" value="9h 40m" note="+1h 15m vs last week" icon="timer" noteMuted />
+          <StatCard label="Focus time this week" value={stats.focusTime} note={stats.focusNote} icon="timer" noteMuted />
         </div>
         <div className="col-12 col-sm-6 col-xl-3">
           <StatCard
             label="Tasks done this week"
-            value={`${doneThisWeek} tasks`}
-            note={`${Math.abs(vsLastWeek)} ${vsLastWeek >= 0 ? 'more' : 'fewer'} than last week`}
+            value={`${stats.doneThisWeek} task${stats.doneThisWeek === 1 ? '' : 's'}`}
+            note={stats.doneNote}
             icon="list-checks"
             noteMuted
           />
@@ -108,7 +178,7 @@ export function DashboardPage({
           <DeadlinesCard deadlines={visibleDeadlines} range={range} onRangeChange={setRange} />
         </div>
         <div className="col-12 col-xl-auto col-side">
-          <FocusTimer currentTask={currentTask} />
+          <FocusTimer currentTask={currentTask} onSessionComplete={data.refreshSummary} />
         </div>
       </div>
 
@@ -121,7 +191,7 @@ export function DashboardPage({
             tasks={visibleTasks}
             doneCount={doneCount}
             totalCount={tasks.length}
-            onToggle={onToggleTask}
+            onToggle={(id) => void data.toggleTask(id)}
             onAddTask={onNewTask}
           />
         </div>

@@ -1,0 +1,32 @@
+name: Web checks
+
+permissions:
+  contents: read
+
+on:
+  push:
+    paths:
+      - 'desktop_frontend/**'
+      - '.github/workflows/web-ci.yml'
+  pull_request:
+    paths:
+      - 'desktop_frontend/**'
+      - '.github/workflows/web-ci.yml'
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop_frontend/client
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: desktop_frontend/client/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      # `build` runs tsc -b (type-check) and then vite build
+      - run: npm run build

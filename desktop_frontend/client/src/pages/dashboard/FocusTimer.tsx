@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Task } from '../../types';
 import { Icon, PlayIcon } from '../../components/Icon';
+import { ApiError, focusApi, type ApiFocusSession } from '../../lib/api';
+import { startOfDay } from '../../lib/dates';
 
 const FOCUS_SECONDS = 25 * 60;
 const BREAK_SECONDS = 5 * 60;
@@ -71,35 +73,141 @@ function SessionDots({ completed }: { completed: number }) {
   );
 }
 
-export function FocusTimer({ currentTask }: { currentTask?: Task }) {
+interface FocusTimerProps {
+  currentTask?: Task;
+  /** Called after a focus session is recorded on the server, so "Focus time this week" can refresh. */
+  onSessionComplete?: () => void;
+}
+
+/**
+ * Pomodoro timer. Focus phases are recorded as focus sessions on the API (start / pause / resume /
+ * complete / cancel); breaks are local only. The countdown itself runs in the browser.
+ */
+export function FocusTimer({ currentTask, onSessionComplete }: FocusTimerProps) {
   const [phase, setPhase] = useState<Phase>('focus');
   const [remaining, setRemaining] = useState(FOCUS_SECONDS);
   const [running, setRunning] = useState(false);
   const [completedSessions, setCompletedSessions] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const duration = phase === 'focus' ? FOCUS_SECONDS : BREAK_SECONDS;
 
-  useEffect(() => {
-    if (!running) return;
-    const id = window.setInterval(() => setRemaining((r) => Math.max(0, r - 1)), 1000);
-    return () => window.clearInterval(id);
-  }, [running]);
+  const adopt = useCallback((session: ApiFocusSession) => {
+    setSessionId(session.id);
+    setPhase('focus');
+    setRemaining(Math.max(0, session.targetSeconds - session.elapsedSeconds));
+    setRunning(session.status === 'running');
+  }, []);
 
+  // Pick up a session that is still open on the server (e.g. after a reload) and today's completed count.
   useEffect(() => {
-    if (remaining > 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [{ session }, list] = await Promise.all([focusApi.active(), focusApi.list()]);
+        if (cancelled) return;
+        if (session) adopt(session);
+        const todayStart = startOfDay(new Date()).getTime();
+        const doneToday = list.items.filter((s) => s.status === 'completed' && s.completedAt && new Date(s.completedAt).getTime() >= todayStart);
+        setCompletedSessions(Math.min(SESSIONS_PER_DAY, doneToday.length));
+      } catch (err: unknown) {
+        if (!cancelled) setSyncError(err instanceof Error ? err.message : 'Could not load focus sessions');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [adopt]);
+
+  /** End of a phase: a finished focus block is recorded on the server and rolls into a break; a finished break stops and waits for Start. */
+  const finishPhase = useCallback(() => {
     if (phase === 'focus') {
       setCompletedSessions((c) => Math.min(SESSIONS_PER_DAY, c + 1));
       setPhase('break');
       setRemaining(BREAK_SECONDS);
+      if (sessionId) {
+        setSessionId(null);
+        focusApi
+          .act(sessionId, 'complete')
+          .then(() => onSessionComplete?.())
+          .catch((err: unknown) => setSyncError(err instanceof Error ? err.message : 'Could not save the session'));
+      }
     } else {
       setPhase('focus');
       setRemaining(FOCUS_SECONDS);
+      setRunning(false);
     }
-  }, [remaining, phase]);
+  }, [phase, sessionId, onSessionComplete]);
 
-  const reset = () => {
+  // The ticking interval reads the latest values through refs, so it is created once per run
+  // instead of being torn down every second.
+  const remainingRef = useRef(remaining);
+  const finishPhaseRef = useRef(finishPhase);
+  useEffect(() => {
+    remainingRef.current = remaining;
+  }, [remaining]);
+  useEffect(() => {
+    finishPhaseRef.current = finishPhase;
+  }, [finishPhase]);
+
+  useEffect(() => {
+    if (!running) return;
+    const id = window.setInterval(() => {
+      const next = Math.max(0, remainingRef.current - 1);
+      remainingRef.current = next;
+      setRemaining(next);
+      if (next === 0) finishPhaseRef.current();
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [running]);
+
+  /** Runs an API call for the timer without blocking it; failures show as a small note. */
+  const sync = async <T,>(call: () => Promise<T>): Promise<T | null> => {
+    try {
+      const value = await call();
+      setSyncError(null);
+      return value;
+    } catch (err: unknown) {
+      setSyncError(err instanceof Error ? err.message : 'Could not sync with the server');
+      return null;
+    }
+  };
+
+  const start = async () => {
+    setRunning(true);
+    if (phase !== 'focus') return;
+    if (sessionId) {
+      await sync(() => focusApi.act(sessionId, 'resume'));
+      return;
+    }
+    const session = await sync(async () => {
+      try {
+        return await focusApi.start({ taskId: currentTask?.id ?? null, targetSeconds: FOCUS_SECONDS });
+      } catch (err: unknown) {
+        // Another tab or device already has a session open; continue that one instead.
+        if (!(err instanceof ApiError && err.code === 'ACTIVE_SESSION_EXISTS')) throw err;
+        const { session: existing } = await focusApi.active();
+        if (!existing) throw err;
+        return existing.status === 'paused' ? focusApi.act(existing.id, 'resume') : existing;
+      }
+    });
+    if (session) adopt(session);
+  };
+
+  const pause = async () => {
+    setRunning(false);
+    if (sessionId && phase === 'focus') await sync(() => focusApi.act(sessionId, 'pause'));
+  };
+
+  const reset = async () => {
     setRunning(false);
     setRemaining(duration);
+    if (sessionId) {
+      const id = sessionId;
+      setSessionId(null);
+      await sync(() => focusApi.act(id, 'cancel'));
+    }
   };
 
   const sessionLabel =
@@ -136,14 +244,17 @@ export function FocusTimer({ currentTask }: { currentTask?: Task }) {
         <SessionDots completed={completedSessions} />
       </div>
 
-      <div className="d-flex align-items-center timer-controls" style={{ gap: 10 }}>
-        <button type="button" className="btn-pill btn-pill-ink flex-grow-1" onClick={() => setRunning((r) => !r)}>
-          {running ? <Icon name="pause" /> : <PlayIcon />}
-          {running ? 'Pause' : remaining === duration ? 'Start' : 'Resume'}
-        </button>
-        <button type="button" className="icon-btn reset-btn" aria-label="Reset timer" onClick={reset}>
-          <Icon name="reset" />
-        </button>
+      <div className="d-flex flex-column" style={{ gap: 6 }}>
+        <div className="d-flex align-items-center timer-controls" style={{ gap: 10 }}>
+          <button type="button" className="btn-pill btn-pill-ink flex-grow-1" onClick={() => void (running ? pause() : start())}>
+            {running ? <Icon name="pause" /> : <PlayIcon />}
+            {running ? 'Pause' : remaining === duration ? 'Start' : 'Resume'}
+          </button>
+          <button type="button" className="icon-btn reset-btn" aria-label="Reset timer" onClick={() => void reset()}>
+            <Icon name="reset" />
+          </button>
+        </div>
+        {syncError && <span className="t-caption text-danger">{syncError}</span>}
       </div>
     </section>
   );

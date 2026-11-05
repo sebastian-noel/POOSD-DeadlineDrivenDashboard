@@ -15,7 +15,9 @@ const config: Config = {
   MONGODB_URI: 'unused',
   JWT_SECRET: 'test-secret-must-be-at-least-32-characters-long',
   API_PUBLIC_URL: 'https://api.example.com',
+  JWT_TTL_SECONDS: 3600,
   CORS_ORIGINS: '',
+  MAIL_TRANSPORT: 'smtp',
   SMTP_HOST: 'unused',
   SMTP_PORT: 587,
   SMTP_USER: 'unused',
@@ -31,6 +33,7 @@ const verificationTokens = new Map<string, string>()
 const mailer: Mailer = {
   async sendVerification(email, token) { verificationTokens.set(email, token) },
   async sendPasswordReset() {},
+  async sendContactMessage() {},
 }
 
 before(async () => {
