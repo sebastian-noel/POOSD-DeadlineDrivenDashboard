@@ -33,9 +33,6 @@ function noticeForVerification(verified: '1' | '0' | null): Notice | null {
   }
   return null;
 }
-  // controls public screen
-  const [publicView, setPublicView] = useState<PublicView>('Home');
-  const [activePublicTab, setActivePublicTab] = useState<HomePage>('Home');
 
 interface AuthenticatedAppProps {
   user: ApiUser;
@@ -86,7 +83,7 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(() => !session.token);
 
   // public screens
-  const [publicView, setPublicView] = useState<PublicView>(link.reset ? 'ResetPassword' : 'Login');
+  const [publicView, setPublicView] = useState<PublicView>(link.reset ? 'ResetPassword' : link.verified ? 'Login' : 'Home');
   const [activePublicTab, setActivePublicTab] = useState<HomePage>('Home');
   const [loginNotice, setLoginNotice] = useState<Notice | null>(() => noticeForVerification(link.verified));
   const [resetToken, setResetToken] = useState<string | null>(link.reset);

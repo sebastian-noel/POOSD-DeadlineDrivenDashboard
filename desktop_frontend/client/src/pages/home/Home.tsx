@@ -1,4 +1,3 @@
-import { Container } from 'react-bootstrap';
 import { Container, Row, Col } from 'react-bootstrap';
 import mascot from '../../assets/mascot.svg';
 import calendar from '../../assets/calendar.jpg';
