@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Task } from '../../types';
 import { Icon, PlayIcon } from '../../components/Icon';
 import { ApiError, focusApi, type ApiFocusSession } from '../../lib/api';
@@ -120,14 +120,8 @@ export function FocusTimer({ currentTask, onSessionComplete }: FocusTimerProps) 
     };
   }, [adopt]);
 
-  useEffect(() => {
-    if (!running) return;
-    const id = window.setInterval(() => setRemaining((r) => Math.max(0, r - 1)), 1000);
-    return () => window.clearInterval(id);
-  }, [running]);
-
-  useEffect(() => {
-    if (remaining > 0) return;
+  /** End of a phase: a finished focus block is recorded on the server and rolls into a break; a finished break stops and waits for Start. */
+  const finishPhase = useCallback(() => {
     if (phase === 'focus') {
       setCompletedSessions((c) => Math.min(SESSIONS_PER_DAY, c + 1));
       setPhase('break');
@@ -142,8 +136,31 @@ export function FocusTimer({ currentTask, onSessionComplete }: FocusTimerProps) 
     } else {
       setPhase('focus');
       setRemaining(FOCUS_SECONDS);
+      setRunning(false);
     }
-  }, [remaining, phase, sessionId, onSessionComplete]);
+  }, [phase, sessionId, onSessionComplete]);
+
+  // The ticking interval reads the latest values through refs, so it is created once per run
+  // instead of being torn down every second.
+  const remainingRef = useRef(remaining);
+  const finishPhaseRef = useRef(finishPhase);
+  useEffect(() => {
+    remainingRef.current = remaining;
+  }, [remaining]);
+  useEffect(() => {
+    finishPhaseRef.current = finishPhase;
+  }, [finishPhase]);
+
+  useEffect(() => {
+    if (!running) return;
+    const id = window.setInterval(() => {
+      const next = Math.max(0, remainingRef.current - 1);
+      remainingRef.current = next;
+      setRemaining(next);
+      if (next === 0) finishPhaseRef.current();
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [running]);
 
   /** Runs an API call for the timer without blocking it; failures show as a small note. */
   const sync = async <T,>(call: () => Promise<T>): Promise<T | null> => {

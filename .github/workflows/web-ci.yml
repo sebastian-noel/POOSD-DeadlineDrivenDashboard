@@ -27,5 +27,6 @@ jobs:
           cache: npm
           cache-dependency-path: desktop_frontend/client/package-lock.json
       - run: npm ci
+      - run: npm run lint
       # `build` runs tsc -b (type-check) and then vite build
       - run: npm run build

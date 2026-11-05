@@ -17,6 +17,17 @@ export interface NewTaskInput {
   dueAt: string | null;
 }
 
+interface Loaded {
+  tasks: ApiTask[];
+  milestones: ApiMilestone[];
+  summary: DashboardSummary;
+}
+
+async function loadAll(): Promise<Loaded> {
+  const [taskPage, milestonePage, summary] = await Promise.all([tasksApi.list(), milestonesApi.list(), dashboardApi.summary()]);
+  return { tasks: taskPage.items, milestones: milestonePage.items, summary };
+}
+
 export interface DashboardData {
   tasks: ApiTask[];
   milestones: ApiMilestone[];
@@ -51,19 +62,22 @@ export function useDashboardData(onSessionExpired: () => void): DashboardData {
     [onSessionExpired],
   );
 
+  const apply = useCallback((data: Loaded) => {
+    setTasks(data.tasks);
+    setMilestones(data.milestones);
+    setSummary(data.summary);
+    setError(null);
+  }, []);
+
   const refresh = useCallback(async () => {
     try {
-      const [taskPage, milestonePage, dashboard] = await Promise.all([tasksApi.list(), milestonesApi.list(), dashboardApi.summary()]);
-      setTasks(taskPage.items);
-      setMilestones(milestonePage.items);
-      setSummary(dashboard);
-      setError(null);
+      apply(await loadAll());
     } catch (e) {
       fail(e);
     } finally {
       setLoading(false);
     }
-  }, [fail]);
+  }, [apply, fail]);
 
   const refreshSummary = useCallback(async () => {
     try {
@@ -73,9 +87,24 @@ export function useDashboardData(onSessionExpired: () => void): DashboardData {
     }
   }, [fail]);
 
+  // Initial load. State is only set from the promise callbacks, and never after unmount
+  // (`onSessionExpired` should be a stable callback, or this refetches on every render).
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let cancelled = false;
+    loadAll()
+      .then((data) => {
+        if (!cancelled) apply(data);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) fail(e);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [apply, fail]);
 
   const toggleTask = useCallback(
     async (id: string) => {
