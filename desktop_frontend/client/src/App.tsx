@@ -4,10 +4,11 @@ import { Toast, ToastContainer } from 'react-bootstrap';
 import { NewTaskModal } from './components/NewTaskModal';
 import { PlaceholderPage } from './components/PlaceholderPage';
 import { TopNav } from './components/TopNav';
-import { initialTasks, notifications as initialNotifications } from './data/mockData';
+import { initialSettings, initialTasks, notifications as initialNotifications } from './data/mockData';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
+import { SettingsPage } from './pages/settings/SettingsPage';
 
-import type { Page, Task, HomePage, PublicView, Notification } from './types';
+import type { Page, Task, HomePage, PublicView, Notification, UserSettings } from './types';
 import { HomeTopNav } from './components/HomeTopNav';
 import { Login } from './pages/home/Login';
 import { SignUp } from './pages/home/SignUp';
@@ -32,11 +33,20 @@ export default function App() {
   const [showNewTask, setShowNewTask] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
   const [hasUnread, setHasUnread] = useState(true);
+  const [search, setSearch] = useState('');
+  const [settings, setSettings] = useState<UserSettings>(initialSettings);
   const [toast, setToast] = useState<string | null>(null);
 
   const toggleTask = (id: string) => setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
 
   const dismissNotification = (id: string) => setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const showUnreadDot = hasUnread && notifications.length > 0;
+  const markNotificationsRead = () => setHasUnread(false);
+
+  const saveSettings = (next: UserSettings) => {
+    setSettings(next);
+    setToast('Settings saved');
+  };
 
   const createTask = (label: string, tag: string) => {
     setTasks((prev) => [...prev, { id: crypto.randomUUID(), label, tag, context: `${tag} · added today`, done: false }]);
@@ -107,11 +117,25 @@ export default function App() {
           tasks={tasks}
           onToggleTask={toggleTask}
           onNewTask={() => setShowNewTask(true)}
+          search={search}
+          onSearchChange={setSearch}
           notifications={notifications}
           onDismissNotification={dismissNotification}
-          hasUnread={hasUnread && notifications.length > 0}
-          onOpenNotifications={() => setHasUnread(false)}
+          hasUnread={showUnreadDot}
+          onOpenNotifications={markNotificationsRead}
           onNavigate={setPage}
+        />
+      ) : page === 'Settings' ? (
+        <SettingsPage
+          settings={settings}
+          onSave={saveSettings}
+          search={search}
+          onSearchChange={setSearch}
+          onSearchSubmit={() => setPage('Dashboard')}
+          notifications={notifications}
+          onDismissNotification={dismissNotification}
+          hasUnread={showUnreadDot}
+          onOpenNotifications={markNotificationsRead}
         />
       ) : (
         <PlaceholderPage page={page} onBack={() => setPage('Dashboard')} />

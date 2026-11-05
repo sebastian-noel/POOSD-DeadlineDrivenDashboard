@@ -1,4 +1,4 @@
-import type { Deadline, Milestone, Notification, Task } from '../types';
+import type { CalendarView, Deadline, Milestone, Notification, Task, UserSettings, WeekStart } from '../types';
 
 export const USER_NAME = 'User';
 export const TODAY_LABEL = 'Tuesday, October 27';
@@ -37,6 +37,38 @@ export const notifications: Notification[] = [
   { id: 'n2', text: 'Literature review milestone is at risk', time: '5h ago' },
   { id: 'n3', text: 'You finished 4 more tasks than last week', time: 'Yesterday' },
 ];
+
+export const REMINDER_OPTIONS = ['1 hour before', '3 hours before', '1 day before', '2 days before', '1 week before'];
+
+export const WEEK_START_OPTIONS: WeekStart[] = ['Sunday', 'Monday'];
+
+export const CALENDAR_VIEW_OPTIONS: CalendarView[] = ['Month', 'Week', 'Day'];
+
+export const TIME_ZONE_OPTIONS = [
+  { value: 'America/New_York', label: 'Eastern Time (New York)' },
+  { value: 'America/Chicago', label: 'Central Time (Chicago)' },
+  { value: 'America/Denver', label: 'Mountain Time (Denver)' },
+  { value: 'America/Phoenix', label: 'Mountain Time (Phoenix)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (Los Angeles)' },
+  { value: 'America/Anchorage', label: 'Alaska Time (Anchorage)' },
+  { value: 'Pacific/Honolulu', label: 'Hawaii Time (Honolulu)' },
+  { value: 'UTC', label: 'Coordinated Universal Time (UTC)' },
+];
+
+export const initialSettings: UserSettings = {
+  displayName: USER_NAME,
+  email: 'user@example.com',
+  deadlineReminders: true,
+  remindBefore: '1 day before',
+  dailySummary: false,
+  focusMinutes: 25,
+  shortBreakMinutes: 5,
+  longBreakMinutes: 15,
+  longBreakAfterSessions: 4,
+  weekStartsOn: 'Sunday',
+  defaultCalendarView: 'Month',
+  timeZone: 'America/New_York',
+};
 
 /** Tasks completed earlier this week, before today's list. */
 export const TASKS_DONE_BEFORE_TODAY = 9;

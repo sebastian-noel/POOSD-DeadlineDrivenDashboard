@@ -32,6 +32,8 @@ interface DashboardPageProps {
   tasks: Task[];
   onToggleTask: (id: string) => void;
   onNewTask: () => void;
+  search: string;
+  onSearchChange: (value: string) => void;
   notifications: Notification[];
   onDismissNotification: (id: string) => void;
   hasUnread: boolean;
@@ -43,13 +45,14 @@ export function DashboardPage({
   tasks,
   onToggleTask,
   onNewTask,
+  search,
+  onSearchChange,
   notifications,
   onDismissNotification,
   hasUnread,
   onOpenNotifications,
   onNavigate,
 }: DashboardPageProps) {
-  const [search, setSearch] = useState('');
   const [range, setRange] = useState<DeadlineRange>('three-weeks');
 
   const query = search.trim();
@@ -74,7 +77,7 @@ export function DashboardPage({
         dateLabel={TODAY_LABEL}
         upcomingThisWeek={upcomingThisWeek}
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={onSearchChange}
         notifications={notifications}
         onDismissNotification={onDismissNotification}
         hasUnread={hasUnread}
