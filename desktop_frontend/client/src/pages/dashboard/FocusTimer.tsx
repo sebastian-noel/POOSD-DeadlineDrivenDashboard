@@ -73,9 +73,9 @@ function SessionDots({ completed }: { completed: number }) {
 
 export function FocusTimer({ currentTask }: { currentTask?: Task }) {
   const [phase, setPhase] = useState<Phase>('focus');
-  const [remaining, setRemaining] = useState(16 * 60 + 12);
-  const [running, setRunning] = useState(true);
-  const [completedSessions, setCompletedSessions] = useState(1);
+  const [remaining, setRemaining] = useState(FOCUS_SECONDS);
+  const [running, setRunning] = useState(false);
+  const [completedSessions, setCompletedSessions] = useState(0);
 
   const duration = phase === 'focus' ? FOCUS_SECONDS : BREAK_SECONDS;
 

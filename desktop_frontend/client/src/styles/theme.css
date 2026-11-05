@@ -127,7 +127,7 @@ body {
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  background: var(--color-ink);
+  background: var(--color-status-risk);
   border: 2px solid var(--color-bg);
 }
 
@@ -337,6 +337,25 @@ body {
   border-radius: 12px;
   white-space: normal;
   padding: 8px 12px;
+}
+.notif-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-ink-secondary);
+}
+.notif-dismiss:hover { background: var(--color-line-subtle); color: var(--color-ink); }
+.notif-dismiss:focus-visible {
+  outline: 3px solid var(--color-status-on-track);
+  outline-offset: 1px;
 }
 .toast-ea {
   border: 2px solid var(--color-ink);

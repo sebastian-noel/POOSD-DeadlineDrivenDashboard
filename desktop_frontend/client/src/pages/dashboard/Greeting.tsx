@@ -1,7 +1,7 @@
 import { Dropdown } from 'react-bootstrap';
 import mascot from '../../assets/mascot.svg';
 import type { Notification } from '../../types';
-import { Icon } from '../../components/Icon';
+import { CloseIcon, Icon } from '../../components/Icon';
 
 interface GreetingProps {
   userName: string;
@@ -10,6 +10,7 @@ interface GreetingProps {
   search: string;
   onSearchChange: (value: string) => void;
   notifications: Notification[];
+  onDismissNotification: (id: string) => void;
   hasUnread: boolean;
   onOpenNotifications: () => void;
   onNewTask: () => void;
@@ -29,6 +30,7 @@ export function Greeting({
   search,
   onSearchChange,
   notifications,
+  onDismissNotification,
   hasUnread,
   onOpenNotifications,
   onNewTask,
@@ -70,12 +72,27 @@ export function Greeting({
           </Dropdown.Toggle>
           <Dropdown.Menu className="dropdown-menu-ea mt-2">
             <Dropdown.Header className="t-overline text-ink-secondary">NOTIFICATIONS</Dropdown.Header>
-            {notifications.map((n) => (
-              <Dropdown.ItemText key={n.id} className="dropdown-item">
-                <div className="t-body-bold">{n.text}</div>
-                <div className="t-caption text-ink-secondary">{n.time}</div>
-              </Dropdown.ItemText>
-            ))}
+            {notifications.length === 0 ? (
+              <Dropdown.ItemText className="t-body text-ink-secondary px-3 py-2">You're all caught up</Dropdown.ItemText>
+            ) : (
+              notifications.map((n) => (
+                <Dropdown.ItemText key={n.id} className="dropdown-item d-flex align-items-start gap-2">
+                  <div className="flex-grow-1">
+                    <div className="t-body-bold">{n.text}</div>
+                    <div className="t-caption text-ink-secondary">{n.time}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="notif-dismiss"
+                    aria-label={`Clear notification: ${n.text}`}
+                    title="Clear"
+                    onClick={() => onDismissNotification(n.id)}
+                  >
+                    <CloseIcon />
+                  </button>
+                </Dropdown.ItemText>
+              ))
+            )}
           </Dropdown.Menu>
         </Dropdown>
 
