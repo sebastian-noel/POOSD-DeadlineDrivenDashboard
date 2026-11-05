@@ -12,7 +12,7 @@ export function PrivacyPolicy() {
             src={mascot} 
             alt="Erm Actually Mascot" 
             width="250" 
-            className="img-fluid" 
+            className="mb-3 img-fluid" 
             style={{ height: 'auto' }}
           />
 

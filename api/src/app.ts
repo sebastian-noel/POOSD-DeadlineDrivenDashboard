@@ -8,6 +8,7 @@ import { createMailer, type Mailer } from './lib/mailer.js'
 import { validationError } from './lib/route-helpers.js'
 import { authRoutes } from './routes/auth.js'
 import { contactRoutes } from './routes/contact.js'
+import { authRoutes } from './routes/auth.js'
 import { milestoneRoutes } from './routes/milestones.js'
 import { taskRoutes } from './routes/tasks.js'
 import { searchRoutes } from './routes/search.js'
@@ -41,6 +42,7 @@ export function createApp(config: Config, mailer: Mailer = createMailer(config))
     const parsed = z.object({ displayName: z.string().trim().min(1).max(80) }).strict().safeParse(req.body)
     if (!parsed.success) {
       validationError(res, parsed.error)
+      res.status(400).json({ error: 'VALIDATION_ERROR', details: parsed.error.flatten() })
       return
     }
     const user = await User.findByIdAndUpdate(req.userId, { $set: parsed.data }, { new: true, runValidators: true })
@@ -61,6 +63,7 @@ export function createApp(config: Config, mailer: Mailer = createMailer(config))
       res.status(400).json({ error: 'INVALID_JSON', message: 'Request body must be valid JSON' })
       return
     }
+  app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (typeof error === 'object' && error && 'code' in error && error.code === 11000) {
       res.status(409).json({ error: 'CONFLICT' })
       return

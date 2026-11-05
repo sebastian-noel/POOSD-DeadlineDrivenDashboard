@@ -33,6 +33,9 @@ function noticeForVerification(verified: '1' | '0' | null): Notice | null {
   }
   return null;
 }
+  // controls public screen
+  const [publicView, setPublicView] = useState<PublicView>('Home');
+  const [activePublicTab, setActivePublicTab] = useState<HomePage>('Home');
 
 interface AuthenticatedAppProps {
   user: ApiUser;
