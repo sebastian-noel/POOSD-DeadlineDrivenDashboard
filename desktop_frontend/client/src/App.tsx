@@ -4,10 +4,10 @@ import { Toast, ToastContainer } from 'react-bootstrap';
 import { NewTaskModal } from './components/NewTaskModal';
 import { PlaceholderPage } from './components/PlaceholderPage';
 import { TopNav } from './components/TopNav';
-import { initialTasks } from './data/mockData';
+import { initialTasks, notifications as initialNotifications } from './data/mockData';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 
-import type { Page, Task, HomePage, PublicView } from './types';
+import type { Page, Task, HomePage, PublicView, Notification } from './types';
 import { HomeTopNav } from './components/HomeTopNav';
 import { Login } from './pages/home/Login';
 import { SignUp } from './pages/home/SignUp';
@@ -30,10 +30,13 @@ export default function App() {
   const [page, setPage] = useState<Page>('Dashboard');
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [showNewTask, setShowNewTask] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
   const [hasUnread, setHasUnread] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
 
   const toggleTask = (id: string) => setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
+
+  const dismissNotification = (id: string) => setNotifications((prev) => prev.filter((n) => n.id !== id));
 
   const createTask = (label: string, tag: string) => {
     setTasks((prev) => [...prev, { id: crypto.randomUUID(), label, tag, context: `${tag} · added today`, done: false }]);
@@ -104,7 +107,9 @@ export default function App() {
           tasks={tasks}
           onToggleTask={toggleTask}
           onNewTask={() => setShowNewTask(true)}
-          hasUnread={hasUnread}
+          notifications={notifications}
+          onDismissNotification={dismissNotification}
+          hasUnread={hasUnread && notifications.length > 0}
           onOpenNotifications={() => setHasUnread(false)}
           onNavigate={setPage}
         />

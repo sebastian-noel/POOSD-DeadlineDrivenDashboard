@@ -5,9 +5,8 @@ import {
   USER_NAME,
   deadlines,
   milestones,
-  notifications,
 } from '../../data/mockData';
-import type { DeadlineRange, Page, Task } from '../../types';
+import type { DeadlineRange, Notification, Page, Task } from '../../types';
 import { DeadlinesCard } from './DeadlinesCard';
 import { FocusTimer } from './FocusTimer';
 import { Greeting } from './Greeting';
@@ -33,6 +32,8 @@ interface DashboardPageProps {
   tasks: Task[];
   onToggleTask: (id: string) => void;
   onNewTask: () => void;
+  notifications: Notification[];
+  onDismissNotification: (id: string) => void;
   hasUnread: boolean;
   onOpenNotifications: () => void;
   onNavigate: (page: Page) => void;
@@ -42,6 +43,8 @@ export function DashboardPage({
   tasks,
   onToggleTask,
   onNewTask,
+  notifications,
+  onDismissNotification,
   hasUnread,
   onOpenNotifications,
   onNavigate,
@@ -73,6 +76,7 @@ export function DashboardPage({
         search={search}
         onSearchChange={setSearch}
         notifications={notifications}
+        onDismissNotification={onDismissNotification}
         hasUnread={hasUnread}
         onOpenNotifications={onOpenNotifications}
         onNewTask={onNewTask}
