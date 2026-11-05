@@ -23,7 +23,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // controls public screen
-  const [publicView, setPublicView] = useState<PublicView>('Login');
+  const [publicView, setPublicView] = useState<PublicView>('Home');
   const [activePublicTab, setActivePublicTab] = useState<HomePage>('Home');
 
   // keeps track of which tab is highlighted in the dash
