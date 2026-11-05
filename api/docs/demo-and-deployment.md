@@ -1,5 +1,7 @@
 # Hosted app, lab demo, and presentation checklist
 
+> The team's actual deployment lives at `https://ermactually.kirugames.com` on the colors-lab droplet with Apache; the exact remaining steps and redeploy commands are in [`friend-handoff.md`](friend-handoff.md). This page is the general from-scratch guide (nginx) plus the demo/presentation checklists.
+
 The project requirements call for a remote Express API, remote MongoDB, a domain name (no IP addresses, no local demos), JWTs, email verification/reset, and a SwaggerHub demo. The code and tests are ready; hosting needs the team's domain, server, MongoDB Atlas, and an SMTP account.
 
 ## Recommended layout: one domain

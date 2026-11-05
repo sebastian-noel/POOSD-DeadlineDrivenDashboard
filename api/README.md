@@ -91,4 +91,4 @@ curl -i -X POST https://<domain>/api/v1/auth/login \
 
 ## Deploying
 
-See [`docs/demo-and-deployment.md`](docs/demo-and-deployment.md) for the hosted setup, the lab demo with Postman/ARC, and the SwaggerHub presentation. Templates for systemd and nginx are in [`deploy/`](deploy/).
+The live site is `https://ermactually.kirugames.com` on the team's DigitalOcean droplet. [`docs/friend-handoff.md`](docs/friend-handoff.md) is the step-by-step to finish or redeploy it. [`docs/demo-and-deployment.md`](docs/demo-and-deployment.md) covers a from-scratch setup, the lab demo with Postman/ARC, and the SwaggerHub presentation; templates for systemd and nginx are in [`deploy/`](deploy/). [`docs/lab-demo-script.md`](docs/lab-demo-script.md) is the lab check-in script.

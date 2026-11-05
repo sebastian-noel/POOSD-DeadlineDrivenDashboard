@@ -55,7 +55,7 @@ Vite proxies `/api` to `http://localhost:4000` (change with `API_PROXY_TARGET` i
 
 ## Deploying
 
-The hosted app must use a domain name, HTTPS, a remote MongoDB (Atlas), and real email (`MAIL_TRANSPORT=smtp`). The simplest layout is one domain: nginx serves the built web app and proxies `/api` to the Node API. See [`api/docs/demo-and-deployment.md`](api/docs/demo-and-deployment.md) and the templates in [`api/deploy/`](api/deploy/).
+The hosted app must use a domain name, HTTPS, a remote MongoDB (Atlas), and real email (`MAIL_TRANSPORT=smtp`). The live site is `https://ermactually.kirugames.com`: one domain, Apache serves the built web app and proxies `/api` to the Node API. **To finish or redeploy it, follow [`api/docs/friend-handoff.md`](api/docs/friend-handoff.md).** [`api/docs/demo-and-deployment.md`](api/docs/demo-and-deployment.md) describes the general setup from scratch (nginx templates in [`api/deploy/`](api/deploy/)).
 
 ## Tests and CI
 
