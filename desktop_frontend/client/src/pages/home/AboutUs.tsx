@@ -13,7 +13,7 @@ export function AboutUs() {
             alt="Erm Actually Mascot" 
             width="250" 
             className="mb-3 img-fluid"
-            tyle ={{height: 'auto' }}
+            style={{height: 'auto' }}
           />
           <h2 className="t-wordmark text-uppercase text-ink-secondary mb-1">
             WHAT THE HECK IS

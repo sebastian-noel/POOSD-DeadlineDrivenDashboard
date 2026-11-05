@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Container, Spinner } from 'react-bootstrap';
+import { Container } from 'react-bootstrap';
 import mascot from '../../assets/mascot.svg';
 
 export function Home() {
