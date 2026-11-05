@@ -2,6 +2,8 @@
 
 Express 5 + TypeScript + MongoDB backend for the Erm Actually dashboard. Accounts (with email verification and password reset), JWT-protected per-user milestones, tasks, partial-match search, a dashboard summary, focus sessions, and the public contact form.
 
+New to it? [`docs/api-overview.md`](docs/api-overview.md) explains what the API does and why, in plain language, with the questions a TA is likely to ask.
+
 ## Run locally
 
 Requires Node.js 22+ and a MongoDB. `docker compose up -d` in this folder starts MongoDB 7 on `localhost:27017`; otherwise use an Atlas connection string.
