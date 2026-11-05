@@ -81,7 +81,7 @@ You can do it non-interactively from your machine (replace the values; the singl
 ssh root@157.230.225.246 bash -s <<'EOF'
 set -e
 F=/opt/ermactually/api/.env
-set_kv() { grep -q "^$1=" "$F" && sed -i "s|^$1=.*|$1=$2|" "$F" || echo "$1=$2" >> "$F"; }
+set_kv() { grep -v "^$1=" "$F" > "$F.tmp" && printf '%s=%s\n' "$1" "$2" >> "$F.tmp" && mv "$F.tmp" "$F"; }   # not sed: '&' in the URI would break it
 set_kv MONGODB_URI  'mongodb+srv://ermactually_app:PASSWORD@HOST/erm_actually?retryWrites=true&w=majority'
 set_kv SMTP_USER    'teamgmail@gmail.com'
 set_kv SMTP_PASSWORD 'abcdabcdabcdabcd'
