@@ -55,6 +55,8 @@ body {
 }
 @media (min-width: 1200px) {
   .col-side { flex: 0 0 auto; width: 400px; }
+  /* The card itself is 400px wide, as in Figma (the column's gutter padding is added on top). */
+  .col-side.col-side-exact { width: calc(400px + var(--bs-gutter-x)); }
 }
 
 /* ---------- Surfaces ---------- */
@@ -99,13 +101,15 @@ body {
 .icon-btn:focus-visible,
 .nav-link-ea:focus-visible,
 .range-tab:focus-visible,
-.task-check:focus-visible {
+.task-check:focus-visible,
+.switch-btn:focus-visible {
   outline: 3px solid var(--color-status-on-track);
   outline-offset: 2px;
 }
 .logout-btn { padding: 9px 26px; font-size: 18px; font-weight: 600; }
 .new-task-btn { padding: 11px 24px 11px 18px; font-size: 16px; }
 .add-task-btn { padding: 9px 20px 9px 14px; font-size: 15px; gap: 6px; }
+.header-btn { padding: 11px 24px; font-size: 16px; }
 .btn-pill-ink { background: var(--color-ink); color: var(--color-on-ink); }
 .btn-pill-ink:hover { background: #222; color: var(--color-on-ink); }
 
@@ -246,8 +250,24 @@ body {
 }
 
 /* ---------- Focus timer ---------- */
-.timer-ring { position: relative; width: 216px; height: 216px; }
-.timer-ring svg { position: absolute; inset: 0; }
+.timer-ring { position: relative; width: 216px; height: 216px; gap: 2px; }
+.timer-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Focus timer page: the same ring at 145%. */
+.timer-ring-lg { width: 313.2px; height: 313.2px; gap: 2.9px; }
+.timer-ring-lg .timer-time { font-size: 75.4px; }
+.timer-ring-lg .timer-caption { font-size: 21.75px; }
+@media (max-width: 575.98px) {
+  .timer-ring-lg { width: 260px; height: 260px; gap: 2px; }
+  .timer-ring-lg .timer-time { font-size: 62px; }
+  .timer-ring-lg .timer-caption { font-size: 18px; }
+}
+.range-tabs-sm .range-tab { padding: 6px 14px; font-size: 12px; }
+.session-controls { width: 350px; max-width: 100%; }
+.recent-sessions li + li {
+  margin-top: 11px;
+  padding-top: 11px;
+  border-top: 1px solid var(--color-line-subtle);
+}
 .timer-ring-progress { transition: stroke-dashoffset 0.4s linear, stroke 0.3s ease; }
 .timer-time { font-size: 52px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
 .mode-pill { padding: 4px 12px; font-size: 13px; font-weight: 800; }
@@ -308,6 +328,73 @@ body {
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+/* ---------- Settings ---------- */
+@media (min-width: 992px) {
+  .settings-card-account { min-height: 314px; }
+  .settings-card-prefs { min-height: 294px; }
+}
+.settings-field { display: flex; flex-direction: column; gap: 6px; }
+.settings-field-pair { display: flex; gap: 16px; }
+.settings-field-pair > * { flex: 1 1 0; min-width: 0; }
+@media (max-width: 575.98px) {
+  .settings-field-pair { flex-direction: column; gap: 20px; }
+}
+.field-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 46px;
+  padding: 0 16px;
+  border: 2px solid var(--color-ink);
+  border-radius: 16px;
+  background: var(--color-bg);
+}
+.field-control:focus-within { box-shadow: 0 0 0 3px var(--bs-focus-ring-color); }
+.field-control:has(:user-invalid) { border-color: var(--color-status-risk); }
+.field-control input,
+.field-control select {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.field-control input[type='number'] { appearance: textfield; -moz-appearance: textfield; }
+.field-control input[type='number']::-webkit-outer-spin-button,
+.field-control input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+/* The select covers the whole box so the chevron area is clickable too. */
+.field-select { justify-content: flex-end; }
+.field-select select {
+  position: absolute;
+  inset: 0;
+  padding: 0 50px 0 16px;
+  border-radius: 14px;
+  appearance: none;
+  cursor: pointer;
+}
+.field-select img { position: relative; pointer-events: none; }
+.field-select.is-disabled { opacity: 0.45; }
+.field-select.is-disabled select { cursor: not-allowed; }
+.divider-subtle {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--color-line-subtle);
+  opacity: 1;
+}
+.switch-btn {
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
 }
 
 /* ---------- Modal / dropdown ---------- */

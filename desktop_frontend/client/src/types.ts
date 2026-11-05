@@ -39,3 +39,31 @@ export interface Notification {
   text: string;
   time: string;
 }
+
+export type TimerMode = 'focus' | 'short' | 'long';
+
+export interface FocusSessionLog {
+  id: string;
+  title: string;
+  when: string;
+  minutes: number;
+}
+
+export type WeekStart = 'Sunday' | 'Monday';
+export type CalendarView = 'Month' | 'Week' | 'Day';
+
+export interface UserSettings {
+  displayName: string;
+  email: string;
+  deadlineReminders: boolean;
+  remindBefore: string;
+  dailySummary: boolean;
+  focusMinutes: number;
+  shortBreakMinutes: number;
+  longBreakMinutes: number;
+  longBreakAfterSessions: number;
+  weekStartsOn: WeekStart;
+  defaultCalendarView: CalendarView;
+  /** IANA time zone id, e.g. "America/New_York". */
+  timeZone: string;
+}

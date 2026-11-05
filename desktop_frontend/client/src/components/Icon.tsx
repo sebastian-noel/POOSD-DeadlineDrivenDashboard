@@ -1,5 +1,6 @@
 import bell from '../assets/icons/bell.svg';
 import check from '../assets/icons/check.svg';
+import chevronDown from '../assets/icons/chevron-down.svg';
 import clock from '../assets/icons/clock.svg';
 import flag from '../assets/icons/flag.svg';
 import flagStat from '../assets/icons/flag-stat.svg';
@@ -14,6 +15,7 @@ import timer from '../assets/icons/timer.svg';
 const icons = {
   bell,
   check,
+  'chevron-down': chevronDown,
   clock,
   flag,
   'flag-stat': flagStat,

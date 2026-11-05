@@ -4,7 +4,6 @@ import type { DashboardData } from '../../hooks/useDashboardData';
 import { dashboardApi, type ApiUser } from '../../lib/api';
 import {
   MILESTONE_DEADLINE_PREFIX,
-  buildNotifications,
   buildStats,
   milestoneTitles,
   toDeadlines,
@@ -12,7 +11,7 @@ import {
   toUiTasks,
 } from '../../lib/dashboardModel';
 import { todayLabel } from '../../lib/dates';
-import type { DeadlineRange, Page } from '../../types';
+import type { DeadlineRange, Notification, Page } from '../../types';
 import { DeadlinesCard } from './DeadlinesCard';
 import { FocusTimer } from './FocusTimer';
 import { Greeting } from './Greeting';
@@ -40,8 +39,11 @@ interface DashboardPageProps {
   user: ApiUser;
   data: DashboardData;
   onNewTask: () => void;
-  /** Ids of notifications the user has cleared. */
-  dismissedNotificationIds: ReadonlySet<string>;
+  /** Kept in App so pressing Enter in search on another page opens the dashboard filtered. */
+  search: string;
+  onSearchChange: (value: string) => void;
+  /** Built in App (minus the ones the user cleared) so every page's bell shows the same list. */
+  notifications: Notification[];
   onDismissNotification: (id: string) => void;
   hasUnread: boolean;
   onOpenNotifications: () => void;
@@ -52,13 +54,14 @@ export function DashboardPage({
   user,
   data,
   onNewTask,
-  dismissedNotificationIds,
+  search,
+  onSearchChange,
+  notifications,
   onDismissNotification,
   hasUnread,
   onOpenNotifications,
   onNavigate,
 }: DashboardPageProps) {
-  const [search, setSearch] = useState('');
   const [range, setRange] = useState<DeadlineRange>('three-weeks');
   const [match, setMatch] = useState<SearchMatch | null>(null);
 
@@ -93,10 +96,6 @@ export function DashboardPage({
   const tasks = useMemo(() => toUiTasks(data.tasks, titles), [data.tasks, titles]);
   const milestones = useMemo(() => toUiMilestones(data.summary?.milestones ?? []), [data.summary]);
   const deadlines = useMemo(() => toDeadlines(data.tasks, data.summary?.milestones ?? [], titles), [data.tasks, data.summary, titles]);
-  const notifications = useMemo(
-    () => buildNotifications(deadlines, milestones).filter((n) => !dismissedNotificationIds.has(n.id)),
-    [deadlines, milestones, dismissedNotificationIds],
-  );
   const stats = useMemo(() => (data.summary ? buildStats(data.tasks, milestones, data.summary) : null), [data.tasks, milestones, data.summary]);
 
   const visibleTasks = activeMatch ? tasks.filter((t) => activeMatch.taskIds.has(t.id)) : tasks;
@@ -142,7 +141,7 @@ export function DashboardPage({
         dateLabel={todayLabel()}
         upcomingThisWeek={upcomingThisWeek}
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={onSearchChange}
         notifications={notifications}
         onDismissNotification={onDismissNotification}
         hasUnread={hasUnread && notifications.length > 0}

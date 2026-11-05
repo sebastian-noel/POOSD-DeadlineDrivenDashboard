@@ -18,7 +18,8 @@ export function TopNav({ activePage, onNavigate, onLogOut }: TopNavProps) {
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="main-nav" />
         <Navbar.Collapse id="main-nav" className="justify-content-between">
-          <Nav className="mx-lg-auto gap-3 gap-lg-5 py-3 py-lg-0 align-items-lg-center" as="ul">
+          {/* activeKey keeps the underline in sync when a page is opened from a button outside the nav. */}
+          <Nav activeKey={activePage} className="mx-lg-auto gap-3 gap-lg-5 py-3 py-lg-0 align-items-lg-center" as="ul">
             {PAGES.map((page) => (
               <Nav.Item as="li" key={page}>
                 <Nav.Link

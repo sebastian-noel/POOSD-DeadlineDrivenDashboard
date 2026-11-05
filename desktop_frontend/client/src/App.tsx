@@ -1,13 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Spinner, Toast, ToastContainer } from 'react-bootstrap';
 
 import { HomeTopNav } from './components/HomeTopNav';
 import { NewTaskModal } from './components/NewTaskModal';
 import { PlaceholderPage } from './components/PlaceholderPage';
 import { TopNav } from './components/TopNav';
+import { defaultSettings } from './data/preferences';
 import { useDashboardData, type NewTaskInput } from './hooks/useDashboardData';
 import { authApi, session, type ApiUser } from './lib/api';
+import { buildNotifications, milestoneTitles, toDeadlines, toUiMilestones, toUiTasks } from './lib/dashboardModel';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
+import { FocusTimerPage } from './pages/focus/FocusTimerPage';
+import { SettingsPage } from './pages/settings/SettingsPage';
 import { AboutUs } from './pages/home/AboutUs';
 import { Contact } from './pages/home/Contact';
 import { FAQ } from './pages/home/FAQ';
@@ -17,7 +21,7 @@ import { Login, type Notice } from './pages/home/Login';
 import { PrivacyPolicy } from './pages/home/PrivacyPolicy';
 import { ResetPassword } from './pages/home/ResetPassword';
 import { SignUp } from './pages/home/SignUp';
-import type { HomePage, Page, PublicView } from './types';
+import type { HomePage, Page, PublicView, UserSettings } from './types';
 
 /** Query params the API's emailed links add: `?verified=1|0` after email verification, `?reset=<token>` for a password reset. */
 function readLinkParams(): { verified: '1' | '0' | null; reset: string | null } {
@@ -48,7 +52,32 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
   // Ids of notifications the user cleared; kept here so they stay cleared while switching pages.
   const [dismissedNotificationIds, setDismissedNotificationIds] = useState<ReadonlySet<string>>(() => new Set());
   const [hasUnread, setHasUnread] = useState(true);
+  // Kept here so pressing Enter in search on Settings or Focus timer opens the dashboard filtered.
+  const [search, setSearch] = useState('');
+  // Settings are only kept in the browser for now; Save doesn't send anything to the API yet.
+  const [settings, setSettings] = useState<UserSettings>(() => ({
+    ...defaultSettings,
+    displayName: user.displayName,
+    email: user.email,
+  }));
   const data = useDashboardData(onSessionExpired);
+
+  // Built here, not in DashboardPage, so the bell on every page shows the same list.
+  const titles = useMemo(() => milestoneTitles(data.milestones), [data.milestones]);
+  const notifications = useMemo(() => {
+    const progress = data.summary?.milestones ?? [];
+    return buildNotifications(toDeadlines(data.tasks, progress, titles), toUiMilestones(progress)).filter(
+      (n) => !dismissedNotificationIds.has(n.id),
+    );
+  }, [data.tasks, data.summary, titles, dismissedNotificationIds]);
+  const currentTask = useMemo(() => toUiTasks(data.tasks, titles).find((t) => !t.done), [data.tasks, titles]);
+  const showUnreadDot = hasUnread && notifications.length > 0;
+  const markNotificationsRead = () => setHasUnread(false);
+
+  const saveSettings = (next: UserSettings) => {
+    setSettings(next);
+    notify('Settings saved');
+  };
 
   const createTask = async (input: NewTaskInput) => {
     await data.createTask(input);
@@ -72,11 +101,37 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
           user={user}
           data={data}
           onNewTask={() => setShowNewTask(true)}
-          dismissedNotificationIds={dismissedNotificationIds}
+          search={search}
+          onSearchChange={setSearch}
+          notifications={notifications}
           onDismissNotification={dismissNotification}
           hasUnread={hasUnread}
-          onOpenNotifications={() => setHasUnread(false)}
+          onOpenNotifications={markNotificationsRead}
           onNavigate={setPage}
+        />
+      ) : page === 'Focus timer' ? (
+        <FocusTimerPage
+          currentTask={currentTask}
+          onOpenSettings={() => setPage('Settings')}
+          search={search}
+          onSearchChange={setSearch}
+          onSearchSubmit={() => setPage('Dashboard')}
+          notifications={notifications}
+          onDismissNotification={dismissNotification}
+          hasUnread={showUnreadDot}
+          onOpenNotifications={markNotificationsRead}
+        />
+      ) : page === 'Settings' ? (
+        <SettingsPage
+          settings={settings}
+          onSave={saveSettings}
+          search={search}
+          onSearchChange={setSearch}
+          onSearchSubmit={() => setPage('Dashboard')}
+          notifications={notifications}
+          onDismissNotification={dismissNotification}
+          hasUnread={showUnreadDot}
+          onOpenNotifications={markNotificationsRead}
         />
       ) : (
         <PlaceholderPage page={page} onBack={() => setPage('Dashboard')} />
