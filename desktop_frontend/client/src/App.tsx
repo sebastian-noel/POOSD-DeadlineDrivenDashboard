@@ -6,6 +6,7 @@ import { PlaceholderPage } from './components/PlaceholderPage';
 import { TopNav } from './components/TopNav';
 import { initialSettings, initialTasks, notifications as initialNotifications } from './data/mockData';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
+import { FocusTimerPage } from './pages/focus/FocusTimerPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 
 import type { Page, Task, HomePage, PublicView, Notification, UserSettings } from './types';
@@ -42,6 +43,7 @@ export default function App() {
   const dismissNotification = (id: string) => setNotifications((prev) => prev.filter((n) => n.id !== id));
   const showUnreadDot = hasUnread && notifications.length > 0;
   const markNotificationsRead = () => setHasUnread(false);
+  const currentTask = tasks.find((t) => !t.done);
 
   const saveSettings = (next: UserSettings) => {
     setSettings(next);
@@ -124,6 +126,18 @@ export default function App() {
           hasUnread={showUnreadDot}
           onOpenNotifications={markNotificationsRead}
           onNavigate={setPage}
+        />
+      ) : page === 'Focus timer' ? (
+        <FocusTimerPage
+          currentTask={currentTask}
+          onOpenSettings={() => setPage('Settings')}
+          search={search}
+          onSearchChange={setSearch}
+          onSearchSubmit={() => setPage('Dashboard')}
+          notifications={notifications}
+          onDismissNotification={dismissNotification}
+          hasUnread={showUnreadDot}
+          onOpenNotifications={markNotificationsRead}
         />
       ) : page === 'Settings' ? (
         <SettingsPage

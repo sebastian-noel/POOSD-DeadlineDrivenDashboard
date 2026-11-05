@@ -58,7 +58,7 @@ export function SettingsPage({
           onOpen={onOpenNotifications}
           onDismiss={onDismissNotification}
         />
-        <button type="submit" form={FORM_ID} className="btn-pill btn-pill-ink save-btn">
+        <button type="submit" form={FORM_ID} className="btn-pill btn-pill-ink header-btn">
           Save changes
         </button>
       </PageHeader>
@@ -98,7 +98,7 @@ export function SettingsPage({
                 disabled={!draft.deadlineReminders}
                 onChange={(v) => update('remindBefore', v)}
               />
-              <hr className="settings-divider" />
+              <hr className="divider-subtle" />
               <SwitchRow
                 label="Daily summary"
                 description="Send a morning list of my open tasks."

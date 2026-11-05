@@ -55,6 +55,8 @@ body {
 }
 @media (min-width: 1200px) {
   .col-side { flex: 0 0 auto; width: 400px; }
+  /* The card itself is 400px wide, as in Figma (the column's gutter padding is added on top). */
+  .col-side.col-side-exact { width: calc(400px + var(--bs-gutter-x)); }
 }
 
 /* ---------- Surfaces ---------- */
@@ -107,7 +109,7 @@ body {
 .logout-btn { padding: 9px 26px; font-size: 18px; font-weight: 600; }
 .new-task-btn { padding: 11px 24px 11px 18px; font-size: 16px; }
 .add-task-btn { padding: 9px 20px 9px 14px; font-size: 15px; gap: 6px; }
-.save-btn { padding: 11px 24px; font-size: 16px; }
+.header-btn { padding: 11px 24px; font-size: 16px; }
 .btn-pill-ink { background: var(--color-ink); color: var(--color-on-ink); }
 .btn-pill-ink:hover { background: #222; color: var(--color-on-ink); }
 
@@ -248,8 +250,24 @@ body {
 }
 
 /* ---------- Focus timer ---------- */
-.timer-ring { position: relative; width: 216px; height: 216px; }
-.timer-ring svg { position: absolute; inset: 0; }
+.timer-ring { position: relative; width: 216px; height: 216px; gap: 2px; }
+.timer-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Focus timer page: the same ring at 145%. */
+.timer-ring-lg { width: 313.2px; height: 313.2px; gap: 2.9px; }
+.timer-ring-lg .timer-time { font-size: 75.4px; }
+.timer-ring-lg .timer-caption { font-size: 21.75px; }
+@media (max-width: 575.98px) {
+  .timer-ring-lg { width: 260px; height: 260px; gap: 2px; }
+  .timer-ring-lg .timer-time { font-size: 62px; }
+  .timer-ring-lg .timer-caption { font-size: 18px; }
+}
+.range-tabs-sm .range-tab { padding: 6px 14px; font-size: 12px; }
+.session-controls { width: 350px; max-width: 100%; }
+.recent-sessions li + li {
+  margin-top: 11px;
+  padding-top: 11px;
+  border-top: 1px solid var(--color-line-subtle);
+}
 .timer-ring-progress { transition: stroke-dashoffset 0.4s linear, stroke 0.3s ease; }
 .timer-time { font-size: 52px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
 .mode-pill { padding: 4px 12px; font-size: 13px; font-weight: 800; }
@@ -365,7 +383,7 @@ body {
 .field-select img { position: relative; pointer-events: none; }
 .field-select.is-disabled { opacity: 0.45; }
 .field-select.is-disabled select { cursor: not-allowed; }
-.settings-divider {
+.divider-subtle {
   margin: 0;
   border: 0;
   border-top: 1px solid var(--color-line-subtle);

@@ -44,6 +44,15 @@ export interface Notification {
   time: string;
 }
 
+export type TimerMode = 'focus' | 'short' | 'long';
+
+export interface FocusSessionLog {
+  id: string;
+  title: string;
+  when: string;
+  minutes: number;
+}
+
 export type WeekStart = 'Sunday' | 'Monday';
 export type CalendarView = 'Month' | 'Week' | 'Day';
 
