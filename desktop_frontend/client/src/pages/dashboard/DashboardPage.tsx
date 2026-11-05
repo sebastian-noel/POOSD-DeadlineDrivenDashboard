@@ -40,12 +40,24 @@ interface DashboardPageProps {
   user: ApiUser;
   data: DashboardData;
   onNewTask: () => void;
+  /** Ids of notifications the user has cleared. */
+  dismissedNotificationIds: ReadonlySet<string>;
+  onDismissNotification: (id: string) => void;
   hasUnread: boolean;
   onOpenNotifications: () => void;
   onNavigate: (page: Page) => void;
 }
 
-export function DashboardPage({ user, data, onNewTask, hasUnread, onOpenNotifications, onNavigate }: DashboardPageProps) {
+export function DashboardPage({
+  user,
+  data,
+  onNewTask,
+  dismissedNotificationIds,
+  onDismissNotification,
+  hasUnread,
+  onOpenNotifications,
+  onNavigate,
+}: DashboardPageProps) {
   const [search, setSearch] = useState('');
   const [range, setRange] = useState<DeadlineRange>('three-weeks');
   const [match, setMatch] = useState<SearchMatch | null>(null);
@@ -81,7 +93,10 @@ export function DashboardPage({ user, data, onNewTask, hasUnread, onOpenNotifica
   const tasks = useMemo(() => toUiTasks(data.tasks, titles), [data.tasks, titles]);
   const milestones = useMemo(() => toUiMilestones(data.summary?.milestones ?? []), [data.summary]);
   const deadlines = useMemo(() => toDeadlines(data.tasks, data.summary?.milestones ?? [], titles), [data.tasks, data.summary, titles]);
-  const notifications = useMemo(() => buildNotifications(deadlines, milestones), [deadlines, milestones]);
+  const notifications = useMemo(
+    () => buildNotifications(deadlines, milestones).filter((n) => !dismissedNotificationIds.has(n.id)),
+    [deadlines, milestones, dismissedNotificationIds],
+  );
   const stats = useMemo(() => (data.summary ? buildStats(data.tasks, milestones, data.summary) : null), [data.tasks, milestones, data.summary]);
 
   const visibleTasks = activeMatch ? tasks.filter((t) => activeMatch.taskIds.has(t.id)) : tasks;
@@ -129,7 +144,8 @@ export function DashboardPage({ user, data, onNewTask, hasUnread, onOpenNotifica
         search={search}
         onSearchChange={setSearch}
         notifications={notifications}
-        hasUnread={hasUnread}
+        onDismissNotification={onDismissNotification}
+        hasUnread={hasUnread && notifications.length > 0}
         onOpenNotifications={onOpenNotifications}
         onNewTask={onNewTask}
       />

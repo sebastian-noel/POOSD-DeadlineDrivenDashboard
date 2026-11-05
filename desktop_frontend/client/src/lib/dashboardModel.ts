@@ -126,6 +126,5 @@ export function buildNotifications(deadlines: Deadline[], milestones: Milestone[
   for (const m of milestones) {
     if (m.status === 'At risk') items.push({ id: `risk-${m.id}`, text: `${m.title} milestone is at risk`, time: 'Now' });
   }
-  if (items.length === 0) items.push({ id: 'caught-up', text: 'You’re all caught up', time: 'Now' });
   return items.slice(0, 6);
 }

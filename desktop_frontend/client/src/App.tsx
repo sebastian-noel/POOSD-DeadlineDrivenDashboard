@@ -45,6 +45,8 @@ interface AuthenticatedAppProps {
 function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: AuthenticatedAppProps) {
   const [page, setPage] = useState<Page>('Dashboard');
   const [showNewTask, setShowNewTask] = useState(false);
+  // Ids of notifications the user cleared; kept here so they stay cleared while switching pages.
+  const [dismissedNotificationIds, setDismissedNotificationIds] = useState<ReadonlySet<string>>(() => new Set());
   const [hasUnread, setHasUnread] = useState(true);
   const data = useDashboardData(onSessionExpired);
 
@@ -53,6 +55,13 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
     setShowNewTask(false);
     notify(`Added “${input.title}” to today’s tasks`);
   };
+
+  const dismissNotification = (id: string) =>
+    setDismissedNotificationIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
 
   return (
     <div className="dashboard">
@@ -63,6 +72,8 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
           user={user}
           data={data}
           onNewTask={() => setShowNewTask(true)}
+          dismissedNotificationIds={dismissedNotificationIds}
+          onDismissNotification={dismissNotification}
           hasUnread={hasUnread}
           onOpenNotifications={() => setHasUnread(false)}
           onNavigate={setPage}
