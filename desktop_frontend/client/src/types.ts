@@ -2,13 +2,14 @@ export type Page = 'Dashboard' | 'Milestones' | 'Tasks' | 'Focus timer' | 'Calen
 
 export type DeadlineRange = 'week' | 'three-weeks' | 'all';
 
-export type PublicPage =
+export type HomePage =
   | 'Home' 
   | 'About Us' 
   | 'FAQ' 
-  | 'Privacy Policy & ToS' 
+  | 'Privacy Policy' 
   | 'Contact';
 
+export type PublicView = HomePage | 'Login' | 'SignUp' | 'ForgotPassword';
 export interface Deadline {
   id: string;
   title: string;

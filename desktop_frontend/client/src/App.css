@@ -17,6 +17,18 @@
   }
 }
 
+
+.accordion-button:not(.collapsed) {
+  background-color: #f8f9fa !important;
+  color: #000 !important;
+  box-shadow: none !important;
+}
+
+.accordion-button:focus {
+  box-shadow: none !important;
+  border-color: rgba(0, 0, 0, 0.125) !important;
+}
+
 .hero {
   position: relative;
 
