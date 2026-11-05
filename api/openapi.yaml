@@ -1,15 +1,16 @@
 openapi: 3.0.3
 info:
-  title: Deadline Driven Dashboard API
-  version: 1.0.0
-  description: REST API for user accounts, milestones, tasks, progress, and focus sessions.
+  title: Erm Actually API
+  version: 1.1.0
+  description: REST API for user accounts (email verification, JWT login, password reset), milestones, tasks, partial search, dashboard progress, focus sessions, and the contact form.
 servers:
-  - url: https://api.example.com/api/v1
-    description: Replace with the deployed API domain before presenting in SwaggerHub.
+  - url: https://app.example.com/api/v1
+    description: Replace with the deployed domain before presenting in SwaggerHub.
 security:
   - bearerAuth: []
 tags:
   - name: Authentication
+  - name: Contact
   - name: Milestones
   - name: Tasks
   - name: Progress
@@ -65,12 +66,13 @@ paths:
                 properties:
                   accessToken: { type: string }
                   tokenType: { type: string, example: Bearer }
-                  expiresIn: { type: integer, example: 3600 }
+                  expiresIn: { type: integer, example: 43200, description: Seconds until the token expires (JWT_TTL_SECONDS) }
                   user:
                     type: object
                     properties:
                       id: { type: string }
                       email: { type: string, format: email }
+                      displayName: { type: string }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { description: Invalid email or password }
         '403': { description: Email has not been verified }
@@ -98,7 +100,8 @@ paths:
           required: true
           schema: { type: string }
       responses:
-        '200': { description: Email verified }
+        '302': { description: When WEB_APP_URL is configured, redirects to the web app with ?verified=1 (success) or ?verified=0 (invalid, expired, or already used token) }
+        '200': { description: Email verified (JSON answer when WEB_APP_URL is not configured) }
         '400': { description: Invalid or expired token }
   /auth/forgot-password:
     post:
@@ -127,10 +130,36 @@ paths:
               required: [token, password]
               properties:
                 token: { type: string }
-                password: { type: string, minLength: 12, maxLength: 128 }
+                password: { type: string, minLength: 8, maxLength: 128 }
       responses:
         '200': { description: Password changed; existing JWTs are invalidated }
         '400': { description: Invalid input or expired token }
+  /contact:
+    post:
+      tags: [Contact]
+      summary: Send a message from the public contact form
+      description: The message is stored and, when CONTACT_TO is configured, emailed to the team.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, subject, message]
+              properties:
+                email: { type: string, format: email }
+                subject: { type: string, minLength: 1, maxLength: 150 }
+                message: { type: string, minLength: 1, maxLength: 4000 }
+            example: { email: student@ucf.edu, subject: Feature idea, message: Could tasks have subtasks? }
+      responses:
+        '202':
+          description: Message received
+          content:
+            application/json:
+              example: { id: 507f1f77bcf86cd799439011, message: Message received. We will reach out soon. }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '429': { description: Too many messages from this address in 15 minutes }
   /me:
     get:
       tags: [Authentication]
@@ -280,7 +309,18 @@ paths:
       tags: [Progress]
       summary: Get task counts, milestone progress, upcoming work, and focus minutes
       responses:
-        '200': { description: Dashboard summary for the caller }
+        '200':
+          description: Dashboard summary for the caller
+          content:
+            application/json:
+              example:
+                tasks: { total: 12, completed: 7, completedLast7Days: 4, completedPrevious7Days: 2, overdue: 1, dueNext7Days: 3 }
+                milestones:
+                  - { id: 507f1f77bcf86cd799439011, title: Literature review, dueAt: '2026-11-20T23:59:00.000Z', totalTasks: 10, completedTasks: 6, progressPercent: 60 }
+                upcomingTasks:
+                  - { id: 507f1f77bcf86cd799439012, title: Summarize 4 sources, milestoneId: 507f1f77bcf86cd799439011, dueAt: '2026-11-06T23:59:00.000Z' }
+                focusMinutesLast7Days: 580
+                focusMinutesPrevious7Days: 505
         '401': { $ref: '#/components/responses/Unauthorized' }
   /focus-sessions:
     get:
@@ -356,7 +396,7 @@ components:
       description: Invalid request data
       content:
         application/json:
-          example: { error: VALIDATION_ERROR }
+          example: { error: VALIDATION_ERROR, message: Password must be at least 8 characters, details: [{ path: password, message: Password must be at least 8 characters }] }
     Unauthorized:
       description: Missing or invalid JWT
       content:
@@ -368,7 +408,7 @@ components:
       required: [email, password]
       properties:
         email: { type: string, format: email, maxLength: 254 }
-        password: { type: string, minLength: 12, maxLength: 128 }
+        password: { type: string, minLength: 8, maxLength: 128 }
     EmailOnly:
       type: object
       required: [email]

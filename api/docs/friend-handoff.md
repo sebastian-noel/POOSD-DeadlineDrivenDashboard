@@ -4,7 +4,7 @@ This is the starting point for a teammate taking over the Deadline Driven Dashbo
 
 ## What is already in GitHub
 
-- Working branch: `stevin/api-backend-demo`; draft PR: <https://github.com/sebastian-noel/POOSD-DeadlineDrivenDashboard/pull/1>.
+- Working branch: `stevin/api-integration` (supersedes `stevin/api-backend-demo` / draft PR <https://github.com/sebastian-noel/POOSD-DeadlineDrivenDashboard/pull/1>).
 - Express + TypeScript + MongoDB API in `api/src/` with registration, email verification, login, password reset, JWT-protected user data, milestones, tasks, partial search, dashboard progress, and focus sessions.
 - Automated API tests in `api/tests/`; GitHub Actions runs build and tests.
 - Postman collection: `api/postman/Deadline-Dashboard.postman_collection.json`.
@@ -12,7 +12,7 @@ This is the starting point for a teammate taking over the Deadline Driven Dashbo
 - Deployment templates: `api/deploy/deadline-api.service.example` and `api/deploy/nginx-site.example`.
 - Detailed demo checklist: `api/docs/demo-and-deployment.md`.
 
-The current frontend is only a React starter. The API demo can proceed without it. Do not present the web/mobile app as complete.
+The React web app in `desktop_frontend/client` is wired to this API (sign up, email verification, login, password reset, tasks, milestones, server-side search, focus timer, contact form). The Flutter mobile app is still to come. The API demo can proceed with Postman alone.
 
 ## Access and decisions to obtain from the project owner
 
@@ -32,33 +32,33 @@ Use individual or scoped access where possible. Do not put SSH keys, database UR
 git clone https://github.com/sebastian-noel/POOSD-DeadlineDrivenDashboard.git
 cd POOSD-DeadlineDrivenDashboard
 git fetch origin
-git switch --track origin/stevin/api-backend-demo
+git switch --track origin/stevin/api-integration
 cd api
 npm ci
 npm run build
 npm test
 ```
 
-Use Node.js 22 or newer. The tests start a temporary MongoDB, so a production database is not required for this check. If Git reports the branch already exists locally, use `git switch stevin/api-backend-demo` instead.
+Use Node.js 22 or newer. The tests start a temporary MongoDB, so a production database is not required for this check. If Git reports the branch already exists locally, use `git switch stevin/api-integration` instead. To run the whole app locally (Docker MongoDB, `MAIL_TRANSPORT=console`), follow the root `README.md`.
 
-For source changes, branch from `stevin/api-backend-demo`, make small commits for distinct changes, and open a PR targeting that branch. Coordinate before editing files another teammate owns. Do not reset or overwrite their work.
+For source changes, branch from `main` (or `stevin/api-integration` until it is merged), make small commits for distinct changes, and open a PR. Coordinate before editing files another teammate owns. Do not reset or overwrite their work.
 
 ## Deploy the existing API
 
 1. Confirm the server identity and SSH access through the provider. Install Node.js 22+, Git, and Nginx if needed.
 2. Create the Atlas cluster and app database user. Permit connections from the API server. Keep the `MONGODB_URI` private.
 3. Configure SMTP and verify that the sender can deliver to an address outside the SMTP provider.
-4. Add the DNS A record for the chosen `api.` subdomain. Configure Nginx to proxy to the API on `127.0.0.1:3001`, then obtain a valid HTTPS certificate.
-5. Clone or update the branch on the server. In `api/`, run `npm ci` and `npm run build`.
-6. Copy `api/.env.example` to `api/.env` on the server. Set `MONGODB_URI`, a random `JWT_SECRET` of at least 32 characters, `API_PUBLIC_URL=https://api.<domain>`, `CORS_ORIGINS`, and the SMTP settings. Keep `.env` readable only by the deploy account. Generate a JWT secret with `openssl rand -hex 32`.
-7. Use the systemd template so the API restarts after reboot. Keep `HOST=127.0.0.1`; expose it through Nginx and HTTPS. Replace all template placeholders with real paths, usernames, and domain values.
-8. From a different machine, request `https://api.<domain>/api/v1/health`. Then use the Postman collection to register a fresh email, receive and open its verification link, log in, and call `/api/v1/me` with the returned JWT.
+4. Add the DNS A record for the domain. Use `api/deploy/nginx-site.example`: nginx serves the built web app and proxies `/api/` to the API on `127.0.0.1:3001` on the same domain, then obtain a valid HTTPS certificate (certbot).
+5. Clone or update the branch on the server. Run `npm ci && npm run build` in both `api/` and `desktop_frontend/client/`.
+6. Copy `api/.env.example` to `api/.env` on the server. Set `MONGODB_URI`, a random `JWT_SECRET` of at least 32 characters (`openssl rand -hex 32`), `API_PUBLIC_URL=https://<domain>`, `WEB_APP_URL=https://<domain>`, `MAIL_TRANSPORT=smtp` with the SMTP settings, and optionally `CONTACT_TO`. `CORS_ORIGINS` stays empty on a single domain. Keep `.env` readable only by the deploy account.
+7. Use the systemd template so the API restarts after reboot. Keep `HOST=127.0.0.1`; expose it through nginx and HTTPS. Replace all template placeholders with real paths, usernames, and domain values.
+8. From a different machine, open `https://<domain>/api/v1/health`, then sign up in the web app with a fresh email, open the verification link, and log in. Repeat register/login from the Postman collection and call `/api/v1/me` with the returned JWT.
 
 If registration reports `503 EMAIL_UNAVAILABLE`, inspect SMTP settings and logs; the user may already have been created. After fixing email, use `POST /api/v1/auth/resend-verification` for that account. Never bypass verification for the demo.
 
 ## Demo acceptance checklist
 
-- [ ] Public HTTPS domain resolves and `GET /api/v1/health` returns `200`.
+- [ ] Public HTTPS domain resolves, the web app loads, and `GET /api/v1/health` returns `200`.
 - [ ] Registration creates an account and sends a verification email.
 - [ ] The verification link activates the account.
 - [ ] Login returns `200` and a JWT for a verified account.
