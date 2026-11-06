@@ -1,0 +1,40 @@
+name: Mobile APK
+
+permissions:
+  contents: read
+
+on:
+  push:
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-apk.yml'
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-apk.yml'
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'API the app talks to'
+        default: 'https://ermactually.kirugames.com'
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter build apk --release --dart-define=API_URL=${{ inputs.api_url || 'https://ermactually.kirugames.com' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: erm-actually-apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
