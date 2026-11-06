@@ -11,7 +11,9 @@ import { authApi, session, type ApiUser } from './lib/api';
 import { buildNotifications, milestoneTitles, toDeadlines, toUiMilestones, toUiTasks } from './lib/dashboardModel';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { FocusTimerPage } from './pages/focus/FocusTimerPage';
+import { MilestonesPage } from './pages/milestones/MilestonesPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
+import { TasksPage } from './pages/tasks/TasksPage';
 import { AboutUs } from './pages/home/AboutUs';
 import { Contact } from './pages/home/Contact';
 import { FAQ } from './pages/home/FAQ';
@@ -108,6 +110,28 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
           hasUnread={hasUnread}
           onOpenNotifications={markNotificationsRead}
           onNavigate={setPage}
+        />
+      ) : page === 'Milestones' ? (
+        <MilestonesPage
+          search={search}
+          onSearchChange={setSearch}
+          notifications={notifications}
+          onDismissNotification={dismissNotification}
+          hasUnread={showUnreadDot}
+          onOpenNotifications={markNotificationsRead}
+          onNavigate={setPage}
+          notify={notify}
+        />
+      ) : page === 'Tasks' ? (
+        <TasksPage
+          search={search}
+          onSearchChange={setSearch}
+          notifications={notifications}
+          onDismissNotification={dismissNotification}
+          hasUnread={showUnreadDot}
+          onOpenNotifications={markNotificationsRead}
+          onNavigate={setPage}
+          notify={notify}
         />
       ) : page === 'Focus timer' ? (
         <FocusTimerPage

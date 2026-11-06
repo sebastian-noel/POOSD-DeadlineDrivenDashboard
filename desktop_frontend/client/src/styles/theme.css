@@ -31,7 +31,7 @@ body {
 .t-lead { font-size: 17px; font-weight: 600; }
 .t-heading { font-size: 24px; font-weight: 900; line-height: 1.2; }
 .t-stat { font-size: 36px; font-weight: 900; line-height: 1.1; }
-.t-title { font-size: 16px; font-weight: 800; }
+.t-title { font-size: 16px; font-weight: 800; line-height: normal; }
 .t-body { font-size: 15px; font-weight: 600; }
 .t-body-bold { font-size: 15px; font-weight: 800; }
 .t-caption { font-size: 13px; font-weight: 600; }
@@ -240,6 +240,7 @@ body {
   justify-content: center;
   flex-shrink: 0;
 }
+.date-circle-lg { width: 56px; height: 56px; }
 .date-month { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; line-height: normal; }
 .date-day { font-size: 19px; font-weight: 900; line-height: 1; }
 @media (max-width: 575.98px) {
@@ -322,13 +323,43 @@ body {
 .task-check.checked { background: var(--color-ink); }
 .task-check:hover:not(.checked) { background: #eee; }
 .task-tag {
+  /* Browsers draw the 1.5px border as 1px, so pin the Figma height (25px) instead of relying on it. */
+  display: inline-flex;
+  align-items: center;
+  height: 25px;
   border: 1.5px solid var(--color-ink);
   border-radius: 999px;
-  padding: 3px 10px;
+  padding: 0 10px;
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
 }
+
+/* ---------- Milestones page ---------- */
+.milestone-list > li + li {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-line-subtle);
+}
+/* Every task row underlined, the last one too (Milestones Next due card, Tasks page). */
+.task-list-ruled .task-row:last-child { border-bottom: 1px solid var(--color-line-subtle); }
+
+/* Figma's "normal" leading, for text links styled as buttons (.btn sets 1.5). */
+.lh-normal { line-height: normal; }
+
+/* ---------- Tasks page ---------- */
+.upcoming-row { display: flex; align-items: center; gap: 16px; }
+.upcoming-row > .task-row { flex: 1 1 0; min-width: 0; }
+.upcoming-due { width: 60px; flex-shrink: 0; text-align: right; white-space: nowrap; }
+.progress-segments { display: flex; gap: 6px; }
+.progress-segment {
+  flex: 1 1 0;
+  height: 12px;
+  border-radius: 99px;
+  background: var(--color-line-subtle);
+}
+.progress-segment.done { background: var(--color-ink); }
+.focus-next-btn { width: 100%; padding: 10px 22px; font-size: 15px; }
 
 /* ---------- Settings ---------- */
 @media (min-width: 992px) {
