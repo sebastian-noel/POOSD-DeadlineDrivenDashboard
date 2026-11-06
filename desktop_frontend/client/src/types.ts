@@ -34,6 +34,39 @@ export interface Task {
   done: boolean;
 }
 
+/** A task on the Tasks page. Today's tasks have no due date shown; upcoming ones do. */
+export interface PlannedTask {
+  id: string;
+  label: string;
+  /** Project or course pill, e.g. "Thesis" or "MATH 221". */
+  tag: string;
+  done: boolean;
+  milestone: string;
+  /** e.g. "Wed, Oct 28" */
+  milestoneDue: string;
+  /** Upcoming tasks only: the date shown ("Oct 28") and an ISO date to sort by. */
+  due?: { label: string; iso: string };
+}
+
+/** What the Next due card on the Milestones page shows. */
+export interface NextMilestone {
+  id: string;
+  title: string;
+  /** e.g. "Thesis · Milestone 2 of 5" */
+  context: string;
+  /** Date circle, e.g. "OCT" and 28. */
+  month: string;
+  day: number;
+  /** Badge text, e.g. "Due tomorrow"; `urgent` draws it red. */
+  dueLabel: string;
+  urgent: boolean;
+  /** e.g. "Wed, Oct 28" */
+  dueDate: string;
+  completedTasks: number;
+  totalTasks: number;
+  remainingTasks: Task[];
+}
+
 export interface Notification {
   id: string;
   text: string;

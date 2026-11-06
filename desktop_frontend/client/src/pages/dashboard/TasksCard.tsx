@@ -9,9 +9,17 @@ interface TasksCardProps {
   onAddTask: () => void;
 }
 
-function TaskRow({ task, onToggle }: { task: Task; onToggle: (id: string) => void }) {
+interface TaskRowProps {
+  task: Task;
+  onToggle: (id: string) => void;
+  /** Render as a div when the row sits inside another list item (Tasks page, Upcoming). */
+  as?: 'li' | 'div';
+}
+
+/** A checkable task with its tag. Also used on the Milestones and Tasks pages. */
+export function TaskRow({ task, onToggle, as: Row = 'li' }: TaskRowProps) {
   return (
-    <li className="task-row">
+    <Row className="task-row">
       <button
         type="button"
         role="checkbox"
@@ -24,7 +32,7 @@ function TaskRow({ task, onToggle }: { task: Task; onToggle: (id: string) => voi
       </button>
       <span className={`flex-grow-1 ${task.done ? 't-body text-ink-secondary' : 't-body-bold'}`}>{task.label}</span>
       <span className="task-tag">{task.tag}</span>
-    </li>
+    </Row>
   );
 }
 

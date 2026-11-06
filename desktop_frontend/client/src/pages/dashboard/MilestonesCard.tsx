@@ -15,6 +15,23 @@ function ProgressBar({ percent, color, label }: { percent: number; color: string
   );
 }
 
+/** One milestone: name and status, progress bar, then due date and percent. Also used on the Milestones page. */
+export function MilestoneRow({ milestone: m }: { milestone: Milestone }) {
+  return (
+    <li className="d-flex flex-column" style={{ gap: 8 }}>
+      <div className="d-flex align-items-center justify-content-between gap-2">
+        <span className="t-title">{m.title}</span>
+        <Badge>{m.status}</Badge>
+      </div>
+      <ProgressBar percent={m.percent} color={FILL_COLOR[m.status]} label={`${m.title} progress`} />
+      <div className="d-flex align-items-center justify-content-between">
+        <span className="t-caption text-ink-secondary">{m.detail}</span>
+        <span className="t-caption-bold">{m.percent}%</span>
+      </div>
+    </li>
+  );
+}
+
 interface MilestonesCardProps {
   milestones: Milestone[];
   onViewAll: () => void;
@@ -31,17 +48,7 @@ export function MilestonesCard({ milestones, onViewAll }: MilestonesCardProps) {
       </header>
       <ul className="list-unstyled m-0 d-flex flex-column overflow-auto" style={{ gap: 22 }}>
         {milestones.map((m) => (
-          <li key={m.id} className="d-flex flex-column" style={{ gap: 8 }}>
-            <div className="d-flex align-items-center justify-content-between gap-2">
-              <span className="t-title">{m.title}</span>
-              <Badge>{m.status}</Badge>
-            </div>
-            <ProgressBar percent={m.percent} color={FILL_COLOR[m.status]} label={`${m.title} progress`} />
-            <div className="d-flex align-items-center justify-content-between">
-              <span className="t-caption text-ink-secondary">{m.detail}</span>
-              <span className="t-caption-bold">{m.percent}%</span>
-            </div>
-          </li>
+          <MilestoneRow key={m.id} milestone={m} />
         ))}
         {milestones.length === 0 && <li className="t-body text-ink-secondary py-4 text-center">No milestones match.</li>}
       </ul>
