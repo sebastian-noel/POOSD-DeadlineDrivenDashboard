@@ -1,17 +1,12 @@
 import type { Deadline, DeadlineRange } from '../../types';
 import { Badge } from '../../components/Badge';
+import { dueLabel } from '../../lib/dates';
 
 const RANGES: { id: DeadlineRange; label: string }[] = [
   { id: 'week', label: 'This week' },
   { id: 'three-weeks', label: 'Next 3 weeks' },
   { id: 'all', label: 'All' },
 ];
-
-function dueLabel(daysUntil: number): string {
-  if (daysUntil <= 0) return 'Due today';
-  if (daysUntil === 1) return 'Due tomorrow';
-  return `In ${daysUntil} days`;
-}
 
 function DeadlineRow({ deadline }: { deadline: Deadline }) {
   return (

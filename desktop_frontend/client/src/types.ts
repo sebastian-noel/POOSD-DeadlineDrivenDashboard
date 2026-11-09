@@ -67,6 +67,20 @@ export interface NextMilestone {
   remainingTasks: Task[];
 }
 
+interface CalendarEventBase {
+  id: string;
+  title: string;
+  /** Local due date as YYYY-MM-DD. */
+  date: string;
+  /** Project or course, e.g. "Thesis". */
+  project: string;
+}
+
+/** One item on the Calendar page: a task (open ones listed, done ones counted) or a milestone (chip in its status color). */
+export type CalendarEvent =
+  | (CalendarEventBase & { kind: 'task'; done: boolean })
+  | (CalendarEventBase & { kind: 'milestone'; status: MilestoneStatus });
+
 export interface Notification {
   id: string;
   text: string;
