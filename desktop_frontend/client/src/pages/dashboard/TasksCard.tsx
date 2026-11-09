@@ -30,7 +30,9 @@ export function TaskRow({ task, onToggle, as: Row = 'li' }: TaskRowProps) {
       >
         {task.done && <Icon name="check" size={14} />}
       </button>
-      <span className={`flex-grow-1 ${task.done ? 't-body text-ink-secondary' : 't-body-bold'}`}>{task.label}</span>
+      <span className={`flex-grow-1 ${task.done ? 't-body text-ink-secondary' : 't-body-bold'}`}>
+        <span className={`task-label${task.done ? ' done' : ''}`}>{task.label}</span>
+      </span>
       <span className="task-tag">{task.tag}</span>
     </Row>
   );
