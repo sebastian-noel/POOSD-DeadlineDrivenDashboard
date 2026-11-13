@@ -1,6 +1,8 @@
 import bell from '../assets/icons/bell.svg';
 import check from '../assets/icons/check.svg';
 import chevronDown from '../assets/icons/chevron-down.svg';
+import chevronLeft from '../assets/icons/chevron-left.svg';
+import chevronRight from '../assets/icons/chevron-right.svg';
 import clock from '../assets/icons/clock.svg';
 import flag from '../assets/icons/flag.svg';
 import flagStat from '../assets/icons/flag-stat.svg';
@@ -16,6 +18,8 @@ const icons = {
   bell,
   check,
   'chevron-down': chevronDown,
+  'chevron-left': chevronLeft,
+  'chevron-right': chevronRight,
   clock,
   flag,
   'flag-stat': flagStat,
@@ -44,6 +48,15 @@ export function CloseIcon({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 14 14" aria-hidden="true" className="d-block flex-shrink-0">
       <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Not in the Figma icon set: small check in the current text color (calendar "N done"). */
+export function CheckMarkIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 12 12" aria-hidden="true" className="d-block flex-shrink-0">
+      <path d="M2.5 6.2l2.3 2.3 4.7-4.9" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

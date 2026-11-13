@@ -9,6 +9,7 @@ import { defaultSettings } from './data/preferences';
 import { useDashboardData, type NewTaskInput } from './hooks/useDashboardData';
 import { authApi, session, type ApiUser } from './lib/api';
 import { buildNotifications, milestoneTitles, toDeadlines, toUiMilestones, toUiTasks } from './lib/dashboardModel';
+import { CalendarPage } from './pages/calendar/CalendarPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { FocusTimerPage } from './pages/focus/FocusTimerPage';
 import { MilestonesPage } from './pages/milestones/MilestonesPage';
@@ -144,6 +145,18 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
           onDismissNotification={dismissNotification}
           hasUnread={showUnreadDot}
           onOpenNotifications={markNotificationsRead}
+        />
+      ) : page === 'Calendar' ? (
+        <CalendarPage
+          weekStartsOn={settings.weekStartsOn}
+          search={search}
+          onSearchChange={setSearch}
+          notifications={notifications}
+          onDismissNotification={dismissNotification}
+          hasUnread={showUnreadDot}
+          onOpenNotifications={markNotificationsRead}
+          onNavigate={setPage}
+          notify={notify}
         />
       ) : page === 'Settings' ? (
         <SettingsPage

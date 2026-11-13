@@ -1,75 +1,32 @@
-# React + TypeScript + Vite
+# Erm Actually - Desktop Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This directory contains the desktop frontend client for Erm Actually. It is built for speed, scalability, and type safety using **React**, **TypeScript**, and **Vite**.
 
-Currently, two official plugins are available:
+## Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Ensure you have [Node.js](https://nodejs.org/) installed, then run the following commands from the root of the repository to run the frontend:
 
-## React Compiler
+```bash
+# Navigate to the frontend client directory
+cd desktop_frontend/client
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# Install dependencies (this generates your local node_modules)
+npm install
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+# Start the local development server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## Project Structure
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+* **`public/`**: Static assets that includes `favicon.svg` mascot and the global `icons.svg` sprite sheet.
+* **`src/assets/`**: Static images.
+* **`src/components/`**: Reusable React UI components (Modals, Badges, Navigation).
+* **`src/hooks/`**: Custom React hooks (e.g., `useFocusTimer`, `useDashboardData`) for state management and logic separation.
+* **`src/lib/`**: Utility functions, data models, and API connection handlers.
+* **`src/pages/`**: Components representing the main application views (Dashboard, Calendar, Tasks, Milestones, Focus, Settings, and Home).
+* **`src/styles/`**: Global stylesheets and CSS variables.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Dependency Management
 
-```
+Always run `npm install` inside the `desktop_frontend/client` directory. Running it in the root folder will spawn duplicate lockfiles and cause dependency issues.

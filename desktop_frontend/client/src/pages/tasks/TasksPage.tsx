@@ -8,11 +8,11 @@ import { SearchPill } from '../../components/SearchPill';
 import { FOCUS_PLAN } from '../../data/preferences';
 import {
   SAMPLE_DONE_EARLIER_THIS_WEEK,
-  SAMPLE_TASK_MILESTONES,
+  SAMPLE_MODAL_MILESTONES,
   SAMPLE_TODAY_LABEL,
+  plannedTaskFromInput,
   sampleTasks,
 } from '../../data/sampleTasks';
-import { formatShortDate } from '../../lib/dates';
 import type { Notification, Page, PlannedTask, Task } from '../../types';
 import { TaskRow } from '../dashboard/TasksCard';
 
@@ -23,9 +23,6 @@ const FILTERS: { id: TaskFilter; label: string }[] = [
   { id: 'todo', label: 'To do' },
   { id: 'done', label: 'Done' },
 ];
-
-/** The New task form lists these; the sample data has no ids or dates beyond what the page shows. */
-const MODAL_MILESTONES = SAMPLE_TASK_MILESTONES.map((m) => ({ id: m.id, title: m.title, description: '', dueAt: null }));
 
 function toRow(task: PlannedTask): Task {
   return { id: task.id, label: task.label, tag: task.tag, context: task.milestone, done: task.done };
@@ -96,16 +93,7 @@ export function TasksPage({
 
   // Without a due date a new task joins today's list (after the open ones); with one it goes to Upcoming.
   const addTask: ComponentProps<typeof NewTaskModal>['onCreate'] = async (input) => {
-    const milestone = SAMPLE_TASK_MILESTONES.find((m) => m.id === input.milestoneId);
-    const added: PlannedTask = {
-      id: `new-${Date.now()}`,
-      label: input.title,
-      tag: milestone?.tag ?? input.newMilestoneTitle,
-      done: false,
-      milestone: milestone?.title ?? input.newMilestoneTitle,
-      milestoneDue: milestone?.due ?? 'No due date',
-      due: input.dueAt ? { label: formatShortDate(input.dueAt), iso: input.dueAt } : undefined,
-    };
+    const added = plannedTaskFromInput(input);
     setTasks((prev) => {
       if (added.due) return [...prev, added];
       const lastOpenToday = prev.findLastIndex((t) => !t.due && !t.done);
@@ -258,7 +246,7 @@ export function TasksPage({
         </div>
       </div>
 
-      <NewTaskModal show={showNewTask} onClose={() => setShowNewTask(false)} milestones={MODAL_MILESTONES} onCreate={addTask} />
+      <NewTaskModal show={showNewTask} onClose={() => setShowNewTask(false)} milestones={SAMPLE_MODAL_MILESTONES} onCreate={addTask} />
     </>
   );
 }

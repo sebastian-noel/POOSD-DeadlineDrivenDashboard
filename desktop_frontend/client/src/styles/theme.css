@@ -4,12 +4,18 @@
   --color-bg: #ffffff;
   --color-on-ink: #ffffff;
   --color-ink-secondary: #5c5c5c;
+  --color-ink-muted: #767676;
   --color-line-subtle: #e5e5e5;
   --color-link: #3c51ff;
   --color-status-risk: #dc2626;
   --color-status-on-track: #0d99ff;
   --color-status-complete: #16a34a;
   --color-status-warning: #d97706;
+  /* Light fills behind milestone chips on the calendar. */
+  --color-status-risk-tint: #fdecec;
+  --color-status-on-track-tint: #e6f4ff;
+  --color-status-complete-tint: #e7f6ec;
+  --color-surface-muted: #f7f7f7;
 
   --bs-body-font-family: 'Nunito', system-ui, sans-serif;
   --bs-body-color: var(--color-ink);
@@ -321,6 +327,15 @@ body {
   flex-shrink: 0;
 }
 .task-check.checked { background: var(--color-ink); }
+/* Done tasks are crossed off; the line sweeps across when the box is ticked (and wraps with the text). */
+.task-label {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0 1.5px;
+  transition: background-size 0.3s ease;
+}
+.task-label.done { background-size: 100% 1.5px; }
+@media (prefers-reduced-motion: reduce) {
+  .task-label { transition: none; }
+}
 .task-check:hover:not(.checked) { background: #eee; }
 .task-tag {
   /* Browsers draw the 1.5px border as 1px, so pin the Figma height (25px) instead of relying on it. */
@@ -360,6 +375,128 @@ body {
 }
 .progress-segment.done { background: var(--color-ink); }
 .focus-next-btn { width: 100%; padding: 10px 22px; font-size: 15px; }
+
+/* ---------- Calendar page ---------- */
+.cal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+.cal-month-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.cal-nav-btn { width: 34px; height: 34px; }
+.cal-today-btn { padding: 5px 15px; font-size: 13px; }
+.cal-key { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+.cal-key-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cal-key .cal-chip { padding: 0 6px; font-size: 12px; }
+.cal-dot { width: 6px; height: 6px; border-radius: 999px; flex-shrink: 0; background: var(--color-ink-muted); }
+/* Phones scroll the grid sideways rather than squeezing seven columns. */
+.cal-scroll { overflow-x: auto; }
+.cal-grid {
+  min-width: 840px;
+  border: 1px solid var(--color-line-subtle);
+  border-radius: 15px;
+  overflow: hidden;
+}
+.cal-weekdays,
+.cal-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cal-weekdays > span { padding: 8px 12px; }
+.cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  min-height: 78px;
+  padding: 6px 11px;
+  border-top: 1px solid var(--color-line-subtle);
+  border-right: 1px solid var(--color-line-subtle);
+}
+.cal-day:nth-child(7n) { border-right: 0; }
+.cal-date {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 27px;
+  min-width: 27px;
+  padding: 0 5px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.cal-day.other-month { background: var(--color-surface-muted); }
+.cal-day.other-month .cal-date,
+.cal-day.past .cal-date { color: var(--color-ink-muted); }
+/* Days before today step back so this week and what's next stand out. */
+.cal-day.past .cal-events,
+.cal-day.past .cal-more,
+.cal-day.past .cal-done { opacity: 0.6; }
+.cal-day.is-today { box-shadow: inset 0 0 0 2px var(--color-ink); }
+.cal-day.is-today .cal-date { background: var(--color-ink); color: var(--color-on-ink); }
+.cal-events { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.cal-event { display: flex; align-items: flex-start; gap: 6px; font-size: 13px; }
+.cal-task { font-weight: 600; }
+/* Centers the dot on the first line of a title that wraps. */
+.cal-task .cal-dot { margin-top: 6px; }
+/* Milestones: a chip with a status-colored bar and tint. At risk is also outlined, so it doesn't rely on red alone. */
+.cal-chip {
+  padding: 1px 6px;
+  border: 1.5px solid transparent;
+  border-left: 3px solid var(--chip-color);
+  border-radius: 5px;
+  background: var(--chip-tint);
+  color: var(--color-ink);
+  font-weight: 800;
+}
+.cal-chip.status-on-track { --chip-color: var(--color-status-on-track); --chip-tint: var(--color-status-on-track-tint); }
+.cal-chip.status-completed { --chip-color: var(--color-status-complete); --chip-tint: var(--color-status-complete-tint); }
+.cal-chip.status-at-risk {
+  --chip-color: var(--color-status-risk);
+  --chip-tint: var(--color-status-risk-tint);
+  border-color: var(--chip-color);
+}
+/* Completed milestones are crossed off; a grey line keeps the title readable. */
+.cal-chip.status-completed .cal-event-title,
+.cal-key .cal-chip.status-completed {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: var(--color-ink-muted);
+}
+.cal-done {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-ink-secondary);
+}
+.cal-done svg { color: var(--color-status-complete); }
+.cal-event-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cal-more {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-ink-secondary);
+}
+.cal-more:hover { color: var(--color-ink); text-decoration: underline; }
+.cal-more:focus-visible {
+  outline: 3px solid var(--color-status-on-track);
+  outline-offset: 2px;
+}
+.next-deadlines { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+@media (max-width: 767.98px) {
+  .next-deadlines { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
 
 /* ---------- Settings ---------- */
 @media (min-width: 992px) {

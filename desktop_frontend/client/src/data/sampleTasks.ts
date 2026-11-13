@@ -1,3 +1,6 @@
+import type { NewTaskInput } from '../hooks/useDashboardData';
+import type { ApiMilestone } from '../lib/api';
+import { formatShortDate } from '../lib/dates';
 import type { PlannedTask } from '../types';
 
 /**
@@ -18,6 +21,28 @@ export const SAMPLE_TASK_MILESTONES = [
   { id: 'sprint-4', title: 'Internship sprint 4', tag: 'Internship', due: 'Mon, Nov 2' },
   { id: 'biochem', title: 'Biochem lab series', tag: 'BIO 310', due: 'Fri, Nov 20' },
 ];
+
+/** The same milestones in the shape the New task form lists. */
+export const SAMPLE_MODAL_MILESTONES: ApiMilestone[] = SAMPLE_TASK_MILESTONES.map((m) => ({
+  id: m.id,
+  title: m.title,
+  description: '',
+  dueAt: null,
+}));
+
+/** A task added through the New task form. Kept in the browser only. */
+export function plannedTaskFromInput(input: NewTaskInput): PlannedTask {
+  const milestone = SAMPLE_TASK_MILESTONES.find((m) => m.id === input.milestoneId);
+  return {
+    id: `new-${Date.now()}`,
+    label: input.title,
+    tag: milestone?.tag ?? input.newMilestoneTitle,
+    done: false,
+    milestone: milestone?.title ?? input.newMilestoneTitle,
+    milestoneDue: milestone?.due ?? 'No due date',
+    due: input.dueAt ? { label: formatShortDate(input.dueAt), iso: input.dueAt } : undefined,
+  };
+}
 
 const [litReview, pset, sprint, biochem] = SAMPLE_TASK_MILESTONES;
 
