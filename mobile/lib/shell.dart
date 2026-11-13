@@ -5,6 +5,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'calendar_page.dart';
 import 'model.dart';
 import 'pages.dart';
 import 'state.dart';
@@ -34,7 +35,9 @@ class PageCtx {
   void setSearch(String v) => shell.setSearch(v);
   void navigate(AppPage p) => shell.navigate(p);
   void notify(String message) => showToast(shell.context, message);
-  void openNewTask() => shell.openNewTask();
+
+  /// Opens New task. Completes with the day the task landed on (its due date, or today), or null if cancelled.
+  Future<DateTime?> openNewTask() => shell.openNewTask();
   Future<void> saveSettings(UserSettings s) => shell.saveSettings(s);
 
   /// The first open task: what the focus timer says you're working on.
@@ -105,9 +108,15 @@ class SignedInShellState extends State<SignedInShell> {
     if (mounted) showToast(context, 'Settings saved');
   }
 
-  Future<void> openNewTask() async {
-    final title = await showPanelDialog<String>(context, (ctx) => NewTaskForm(milestones: data.milestones, onCreate: data.createTask));
-    if (title != null && mounted) showToast(context, 'Added “$title” to today’s tasks');
+  Future<DateTime?> openNewTask() async {
+    final added = await showPanelDialog<(String, DateTime?)>(
+      context,
+      (ctx) => NewTaskForm(milestones: data.milestones, onCreate: data.createTask),
+    );
+    if (added == null || !mounted) return null;
+    final (title, due) = added;
+    showToast(context, due == null ? 'Added “$title” to today’s tasks' : 'Added “$title” to ${formatShortDate(dateToIso(due))}');
+    return due ?? DateTime.now();
   }
 
   Widget _content() {
@@ -118,7 +127,7 @@ class SignedInShellState extends State<SignedInShell> {
       AppPage.tasks => TasksPage(ctx),
       AppPage.focus => FocusPage(ctx),
       AppPage.settings => SettingsPage(ctx),
-      AppPage.calendar => PlaceholderPage(ctx, pageNames[page]!),
+      AppPage.calendar => CalendarPage(ctx),
     };
   }
 
@@ -487,7 +496,7 @@ class _NewTaskFormState extends State<NewTaskForm> {
         newMilestoneTitle: _newMilestone.text.trim(),
         dueAt: _due == null ? null : dateToIso(_due!),
       );
-      if (mounted) Navigator.pop(context, title);
+      if (mounted) Navigator.pop(context, (title, _due));
     } catch (e) {
       setState(() {
         _error = errorText(e);

@@ -20,6 +20,12 @@ class Ink2 {
   static const onTrack = Color(0xFF0D99FF);
   static const complete = Color(0xFF16A34A);
   static const warning = Color(0xFFD97706);
+  static const muted = Color(0xFF767676);
+  static const surfaceMuted = Color(0xFFF7F7F7);
+  // Light fills behind milestone chips on the calendar.
+  static const riskTint = Color(0xFFFDECEC);
+  static const onTrackTint = Color(0xFFE6F4FF);
+  static const completeTint = Color(0xFFE7F6EC);
 }
 
 class T {
@@ -440,7 +446,17 @@ class TaskRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Expanded(child: Text(label, style: done ? T.muted(T.body) : T.bodyBold)),
+        // Done tasks are crossed off.
+        Expanded(
+          child: Text(
+            label,
+            style: done
+                ? T
+                      .muted(T.body)
+                      .copyWith(decoration: TextDecoration.lineThrough, decorationColor: Ink2.secondary, decorationThickness: 1.5)
+                : T.bodyBold,
+          ),
+        ),
         const SizedBox(width: 8),
         Container(
           height: 25,

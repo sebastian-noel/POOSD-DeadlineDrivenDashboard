@@ -32,7 +32,8 @@ int daysUntil(String iso) {
   return (diff.inHours / 24).round();
 }
 
-String monthAbbrev(String iso) => _months[local(iso).month - 1].toUpperCase();
+String monthAbbrev(String iso) => monthAbbrevOf(local(iso));
+String monthAbbrevOf(DateTime d) => _months[d.month - 1].toUpperCase();
 int dayOfMonth(String iso) => local(iso).day;
 
 /// e.g. "Oct 28"
@@ -275,3 +276,57 @@ List<AppNotification> buildNotifications(List<Deadline> deadlines, List<UiMilest
   }
   return items.take(6).toList();
 }
+
+// ---------------- calendar (mirrors pages/calendar and types.ts CalendarEvent) ----------------
+
+/// The local calendar day of `date` as YYYY-MM-DD.
+String toDateKey(DateTime date) => '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+/// One item on the Calendar page: a task (open ones listed, done ones counted) or a milestone (chip in its status color).
+class CalendarEvent {
+  CalendarEvent.task(this.id, this.title, this.date, this.project, this.done) : status = null;
+  CalendarEvent.milestone(this.id, this.title, this.date, this.project, MilestoneStatus this.status) : done = false;
+
+  final String id;
+  final String title;
+
+  /// Local due date as YYYY-MM-DD.
+  final String date;
+
+  /// The milestone a task belongs to ("Milestone" for milestones).
+  final String project;
+  final bool done;
+  final MilestoneStatus? status;
+
+  bool get isTask => status == null;
+  bool get isDoneTask => isTask && done;
+}
+
+/// Tasks go on their due date (a task with no due date is planned for today); milestones go on theirs.
+List<CalendarEvent> toCalendarEvents(List<ApiTask> tasks, List<MilestoneProgress> progress, Map<String, String> titles, DateTime today) => [
+  for (final m in progress)
+    if (m.dueAt != null) CalendarEvent.milestone('m:${m.id}', m.title, toDateKey(local(m.dueAt!)), 'Milestone', milestoneStatus(m)),
+  for (final t in tasks)
+    CalendarEvent.task(t.id, t.title, toDateKey(t.dueAt != null ? local(t.dueAt!) : today), titles[t.milestoneId] ?? 'General', t.done),
+];
+
+/// The six weeks shown for `month`, starting on Sunday or Monday.
+List<DateTime> calendarGridDays(DateTime month, String weekStartsOn) {
+  final first = DateTime(month.year, month.month, 1);
+  final firstWeekday = weekStartsOn == 'Monday' ? 1 : 0;
+  final lead = (first.weekday % 7 - firstWeekday + 7) % 7;
+  return [for (var i = 0; i < 42; i++) DateTime(month.year, month.month, 1 - lead + i)];
+}
+
+/// 0 → "Due today", 1 → "Due tomorrow", 3 → "In 3 days"
+String dueLabel(int days) => days <= 0
+    ? 'Due today'
+    : days == 1
+    ? 'Due tomorrow'
+    : 'In $days days';
+
+/// e.g. "November 2026"
+String monthYearLabel(DateTime d) => '${_monthsLong[d.month - 1]} ${d.year}';
+
+/// e.g. "Thursday, November 12, 2026"
+String longDateLabel(DateTime d) => '${todayLabel(d)}, ${d.year}';

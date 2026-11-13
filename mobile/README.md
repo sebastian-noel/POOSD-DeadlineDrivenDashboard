@@ -11,10 +11,11 @@ The mobile version of the Deadline Driven Dashboard. It talks to the same Expres
 | Tasks | My tasks (Today / Upcoming), Today's progress, Focus next, New task | API data |
 | Focus timer | Focus / Short break / Long break, ring, session dots, session plan, recent sessions | `/focus-sessions` |
 | Settings | Profile, Notifications, Focus preferences, Calendar preferences | saved on the phone |
-| Calendar | "hasn't been built yet" placeholder | — |
+| Calendar | month grid (week start from Settings), milestone chips by status, task dots, "+N" / done counts, tap a day to list it, Next deadlines | API data |
 
 Differences from the web app, on purpose:
-- Milestones and Tasks use real API data (the web pages still run on sample data).
+- Milestones, Tasks and Calendar use real API data (those web pages still run on sample data).
+- The web calendar grid scrolls sideways on a phone; the app fits the month on screen with markers per day, and tapping a day lists its milestones and tasks under the grid.
 - One focus timer is shared by the dashboard card and the Focus timer page, so it keeps running when you switch pages, and it uses the lengths from Settings.
 - Settings are saved on the phone (the API has no settings route yet; the web keeps them only until reload).
 
@@ -28,7 +29,8 @@ lib/
   state.dart         DashboardData (useDashboardData), settings, FocusTimerController
   ui.dart            design tokens and shared widgets (panel, pills, badges, task row, timer ring…)
   shell.dart         signed-in top nav, page header, notifications, New task / New milestone dialogs
-  pages.dart         Dashboard, Milestones, Tasks, Focus timer, Settings, Calendar placeholder
+  pages.dart         Dashboard, Milestones, Tasks, Focus timer, Settings
+  calendar_page.dart Calendar (mirrors pages/calendar)
   public_pages.dart  Home, About, FAQ, Privacy, Contact, Log In, Sign Up, Forgot Password
 assets/              mascot, feature photos, icons (rendered from the web SVGs), Nunito font
 android/             standard Flutter 3.47 Android project (package edu.ucf.ermactually)

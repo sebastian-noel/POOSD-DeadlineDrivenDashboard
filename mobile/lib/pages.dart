@@ -994,23 +994,3 @@ class SwitchRow extends StatelessWidget {
     ),
   );
 }
-
-// =====================================================================
-// Calendar (not built yet on the web either)
-// =====================================================================
-
-class PlaceholderPage extends StatelessWidget {
-  const PlaceholderPage(this.ctx, this.name, {super.key});
-  final PageCtx ctx;
-  final String name;
-  @override
-  Widget build(BuildContext context) => Panel(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 48),
-    child: Gap(16, cross: CrossAxisAlignment.center, [
-      const Mascot(width: 210),
-      Text(name, style: T.display),
-      Text('Erm, actually… this page hasn’t been built yet.', style: T.lead, textAlign: TextAlign.center),
-      PillButton('Back to dashboard', ink: true, onPressed: () => ctx.navigate(AppPage.dashboard)),
-    ]),
-  );
-}
