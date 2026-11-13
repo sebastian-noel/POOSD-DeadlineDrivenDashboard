@@ -36,7 +36,7 @@ function readLinkParams(): { verified: '1' | '0' | null; reset: string | null } 
 function noticeForVerification(verified: '1' | '0' | null): Notice | null {
   if (verified === '1') return { kind: 'success', text: 'Email verified! You can log in now.' };
   if (verified === '0') {
-    return { kind: 'danger', text: 'That verification link is invalid, expired, or already used. Try logging in, or request a new link below.' };
+    return { kind: 'danger', text: 'That verification link is invalid or has expired. If you already verified your email, just log in. Otherwise request a new link below.' };
   }
   return null;
 }
