@@ -6,7 +6,7 @@ UCF COP4331 (POOSD) team project: a deadline-driven dashboard for students. MERN
 | ------- | -------------------------- | --------------------------------------------------------------------- |
 | Web app | `desktop_frontend/client`  | React 19, TypeScript, Vite, React-Bootstrap                           |
 | API     | `api`                      | Node 22, Express 5, TypeScript, MongoDB (Mongoose), JWT, nodemailer   |
-| Mobile  | _coming_                   | Flutter                                                               |
+| Mobile  | `mobile`                   | Flutter 3.47 (Android) — see [`mobile/README.md`](mobile/README.md)   |
 
 The web app talks to the API over AJAX (`fetch`) at `/api/v1/...`. Accounts need email verification before login; password reset, server-side partial search, tasks, milestones, a dashboard summary, and focus sessions are all backed by the API. See [`api/README.md`](api/README.md) for the routes.
 
