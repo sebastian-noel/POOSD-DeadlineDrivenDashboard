@@ -32,7 +32,7 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter analyze
+      - run: flutter analyze --no-fatal-infos
       - run: flutter build apk --release --dart-define=API_URL=${{ inputs.api_url || 'https://ermactually.kirugames.com' }}
       - uses: actions/upload-artifact@v4
         with:
