@@ -3,10 +3,8 @@
 library;
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api.dart';
 import 'model.dart';
@@ -134,7 +132,7 @@ const timeZoneOptions = {
   'UTC': 'Coordinated Universal Time (UTC)',
 };
 
-/// Settings page values. Like the web app, these stay on the device (the API has no settings route yet).
+/// Account preferences returned by login and GET/PATCH /me. Local drafts never replace saved values before confirmation.
 class UserSettings {
   UserSettings(this.values);
 
@@ -163,24 +161,20 @@ class UserSettings {
   int get longBreakMinutes => get<int>('longBreakMinutes');
   int get longBreakAfterSessions => get<int>('longBreakAfterSessions');
 
-  static Future<UserSettings> load(ApiUser user) async {
-    final settings = UserSettings.defaults(user);
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString('settings:${user.id}');
-    if (saved != null) {
-      final map = jsonDecode(saved) as Map<String, dynamic>;
-      for (final key in settings.values.keys) {
-        final v = map[key];
-        if (v != null && v.runtimeType == settings.values[key].runtimeType) settings.values[key] = v;
-      }
+  factory UserSettings.fromUser(ApiUser user) {
+    final result = UserSettings.defaults(user);
+    // Only known preference keys are accepted. Profile identity always comes from the account fields.
+    for (final key in result.preferences.keys) {
+      final value = user.settings[key];
+      if (value != null && value.runtimeType == result.values[key].runtimeType) result.values[key] = value;
     }
-    return settings;
+    return result;
   }
 
-  Future<void> save(ApiUser user) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('settings:${user.id}', jsonEncode(values));
-  }
+  Map<String, dynamic> get preferences => {
+    for (final entry in values.entries)
+      if (entry.key != 'displayName' && entry.key != 'email') entry.key: entry.value,
+  };
 }
 
 // ---------------- focus timer ----------------
@@ -199,6 +193,7 @@ class FocusLog {
 /// complete / cancel); breaks are local only. The countdown runs on the phone.
 class FocusTimerController extends ChangeNotifier {
   FocusTimerController(this.data, this.settings) {
+    _durationSeconds = durationOf(mode);
     remaining = duration;
     reload();
   }
@@ -208,6 +203,7 @@ class FocusTimerController extends ChangeNotifier {
 
   TimerMode mode = TimerMode.focus;
   late int remaining;
+  late int _durationSeconds;
   bool running = false;
   int completedSessions = 0;
   String? syncError;
@@ -225,7 +221,7 @@ class FocusTimerController extends ChangeNotifier {
         TimerMode.short => settings.shortBreakMinutes,
         TimerMode.long => settings.longBreakMinutes,
       };
-  int get duration => durationOf(mode);
+  int get duration => _durationSeconds;
   bool get started => remaining < duration;
 
   String get sessionLabel => completedSessions >= sessionsPerDay
@@ -235,8 +231,10 @@ class FocusTimerController extends ChangeNotifier {
   String get status => running ? (mode == TimerMode.focus ? 'In progress' : 'On break') : (started ? 'Paused' : 'Ready');
 
   void updateSettings(UserSettings next) {
+    final ready = !running && !started && _sessionId == null;
     settings = next;
-    if (!running && !started) remaining = duration;
+    // New preferences apply to the next phase, never resize an active or paused block.
+    if (ready) remaining = _durationSeconds = durationOf(mode);
     notifyListeners();
   }
 
@@ -264,6 +262,7 @@ class FocusTimerController extends ChangeNotifier {
 
   void _adopt(ApiFocusSession s) {
     _sessionId = s.id;
+    _durationSeconds = s.targetSeconds;
     mode = TimerMode.focus;
     remaining = (s.targetSeconds - s.elapsedSeconds).clamp(0, 1 << 30);
     _setRunning(s.status == 'running');
@@ -293,7 +292,7 @@ class FocusTimerController extends ChangeNotifier {
     if (mode == TimerMode.focus) {
       completedSessions = (completedSessions + 1).clamp(0, sessionsPerDay);
       mode = completedSessions % sessionsPerDay == 0 ? TimerMode.long : TimerMode.short;
-      remaining = duration;
+      remaining = _durationSeconds = durationOf(mode);
       final id = _sessionId;
       _sessionId = null;
       if (id != null) {
@@ -305,7 +304,7 @@ class FocusTimerController extends ChangeNotifier {
       _setRunning(true);
     } else {
       mode = TimerMode.focus;
-      remaining = duration;
+      remaining = _durationSeconds = durationOf(mode);
       _setRunning(false);
     }
   }
@@ -354,7 +353,7 @@ class FocusTimerController extends ChangeNotifier {
 
   Future<void> reset() async {
     _setRunning(false);
-    remaining = duration;
+    remaining = _durationSeconds = durationOf(mode);
     notifyListeners();
     await _cancelSession();
   }
@@ -363,7 +362,7 @@ class FocusTimerController extends ChangeNotifier {
   Future<void> selectMode(TimerMode next) async {
     _setRunning(false);
     mode = next;
-    remaining = duration;
+    remaining = _durationSeconds = durationOf(mode);
     notifyListeners();
     await _cancelSession();
   }

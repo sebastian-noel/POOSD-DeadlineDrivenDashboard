@@ -55,13 +55,14 @@ final HttpClient _client = HttpClient()..connectionTimeout = const Duration(seco
 /// Sends one request to `/api/v1<path>` and returns the decoded JSON (or null for an empty body).
 Future<dynamic> api(String path, {String method = 'GET', Object? body, bool auth = true}) async {
   final uri = Uri.parse('${apiBaseUrl.replaceAll(RegExp(r'/$'), '')}/api/v1$path');
+  final token = auth ? Session.token : null;
   int status;
   String text;
   try {
     final request = await _client.openUrl(method, uri);
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-    if (auth && Session.token != null) {
-      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer ${Session.token}');
+    if (token != null) {
+      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
     }
     if (body != null) {
       request.headers.contentType = ContentType.json;
@@ -97,11 +98,17 @@ String? _date(dynamic v) => v is String ? v : null;
 int _int(dynamic v) => v is num ? v.toInt() : 0;
 
 class ApiUser {
-  ApiUser(this.id, this.email, this.displayName);
-  factory ApiUser.fromJson(Map<String, dynamic> j) => ApiUser(j['id'] as String, j['email'] as String, (j['displayName'] ?? '') as String);
+  ApiUser(this.id, this.email, this.displayName, {Map<String, dynamic> settings = const {}}) : settings = Map.unmodifiable(settings);
+  factory ApiUser.fromJson(Map<String, dynamic> j) => ApiUser(
+    j['id'] as String,
+    j['email'] as String,
+    (j['displayName'] ?? '') as String,
+    settings: j['settings'] is Map ? Map<String, dynamic>.from(j['settings'] as Map) : const {},
+  );
   final String id;
   final String email;
   final String displayName;
+  final Map<String, dynamic> settings;
 }
 
 class ApiMilestone {
@@ -210,6 +217,14 @@ class AuthApi {
       (await api('/auth/forgot-password', method: 'POST', body: {'email': email}, auth: false))['message'] as String;
 
   static Future<ApiUser> me() async => ApiUser.fromJson(await api('/me') as Map<String, dynamic>);
+
+  static Future<ApiUser> updateProfile({required String displayName, required Map<String, dynamic> settings}) async {
+    final data = await api('/me', method: 'PATCH', body: {'displayName': displayName, 'settings': settings});
+    if (data is! Map<String, dynamic> || data['settings'] is! Map) {
+      throw ApiError(502, 'INVALID_RESPONSE', 'The server did not return saved preferences. Please try again.');
+    }
+    return ApiUser.fromJson(data);
+  }
 }
 
 class ContactApi {

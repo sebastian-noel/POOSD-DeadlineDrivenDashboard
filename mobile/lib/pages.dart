@@ -774,19 +774,25 @@ class _SettingsPageState extends State<SettingsPage> {
   // Edits stay local until "Save changes".
   late final UserSettings draft = widget.ctx.settings.copy();
   final _form = GlobalKey<FormState>();
+  String? _error;
 
   void _update(String key, Object value) => setState(() => draft.values[key] = value);
 
-  void _save() {
-    if (!(_form.currentState?.validate() ?? false)) return;
-    draft.values['displayName'] = (draft.values['displayName'] as String).trim();
-    draft.values['email'] = (draft.values['email'] as String).trim();
-    widget.ctx.saveSettings(draft.copy());
+  Future<void> _save() async {
+    if (widget.ctx.savingSettings || !(_form.currentState?.validate() ?? false)) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _error = null);
+    try {
+      await widget.ctx.saveSettings(draft.copy());
+    } catch (error) {
+      if (mounted) setState(() => _error = '${errorText(error)} Your edits are still here. Try saving again.');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final d = draft;
+    final saving = widget.ctx.savingSettings;
     return Form(
       key: _form,
       child: Gap(24, [
@@ -795,39 +801,67 @@ class _SettingsPageState extends State<SettingsPage> {
           title: 'Settings',
           subtitle: 'Your profile, reminders, and focus preferences',
           onSearchSubmit: () => widget.ctx.navigate(AppPage.dashboard),
-          action: PillButton('Save changes', ink: true, onPressed: _save),
+          action: PillButton('Save changes', ink: true, loading: saving, onPressed: saving ? null : _save),
         ),
+        if (_error != null) Semantics(liveRegion: true, child: ErrorText(_error!)),
         _card('Profile', 18, [
-          SettingsText('Display name', d.get('displayName'), (v) => _update('displayName', v)),
-          SettingsText('Email address', d.get('email'), (v) => _update('email', v), email: true),
+          SettingsText(
+            'Display name',
+            d.get('displayName'),
+            (v) => _update('displayName', v),
+            enabled: !saving,
+            maxLength: 80,
+            required: false,
+          ),
+          SettingsText('Email address', d.get('email'), (_) {}, email: true, readOnly: true, enabled: !saving),
+          Text('Your verified login email cannot be changed here.', style: T.muted(T.caption)),
         ]),
         _card('Notifications', 15, [
+          Text(
+            'Email reminders and daily summaries are not available yet. The bell continues to show upcoming deadlines in the app.',
+            style: T.muted(T.caption),
+          ),
           SwitchRow(
             'Deadline reminders',
             'Remind me when a task or milestone is almost due.',
             d.get('deadlineReminders'),
             (v) => _update('deadlineReminders', v),
+            enabled: false,
           ),
           Labeled(
             'Remind me',
             PillDropdown<String>(
               radius: 16,
               value: d.get('remindBefore'),
-              enabled: d.get<bool>('deadlineReminders'),
+              enabled: false,
               items: {for (final o in reminderOptions) o: o},
               onChanged: (v) => _update('remindBefore', v),
             ),
           ),
           const SubtleDivider(),
-          SwitchRow('Daily summary', 'Send a morning list of my open tasks.', d.get('dailySummary'), (v) => _update('dailySummary', v)),
+          SwitchRow(
+            'Daily summary',
+            'Send a morning list of my open tasks.',
+            d.get('dailySummary'),
+            (v) => _update('dailySummary', v),
+            enabled: false,
+          ),
         ]),
         _card('Focus preferences', 20, [
           _pair(
-            SettingsNumber('Focus length', 'min', 1, 180, d.get('focusMinutes'), (v) => _update('focusMinutes', v)),
-            SettingsNumber('Short break', 'min', 1, 60, d.get('shortBreakMinutes'), (v) => _update('shortBreakMinutes', v)),
+            SettingsNumber('Focus length', 'min', 1, 180, d.get('focusMinutes'), (v) => _update('focusMinutes', v), enabled: !saving),
+            SettingsNumber(
+              'Short break',
+              'min',
+              1,
+              60,
+              d.get('shortBreakMinutes'),
+              (v) => _update('shortBreakMinutes', v),
+              enabled: !saving,
+            ),
           ),
           _pair(
-            SettingsNumber('Long break', 'min', 1, 120, d.get('longBreakMinutes'), (v) => _update('longBreakMinutes', v)),
+            SettingsNumber('Long break', 'min', 1, 120, d.get('longBreakMinutes'), (v) => _update('longBreakMinutes', v), enabled: !saving),
             SettingsNumber(
               'Long break after',
               'sessions',
@@ -835,16 +869,22 @@ class _SettingsPageState extends State<SettingsPage> {
               12,
               d.get('longBreakAfterSessions'),
               (v) => _update('longBreakAfterSessions', v),
+              enabled: !saving,
             ),
           ),
         ]),
         _card('Calendar preferences', 20, [
+          Text(
+            'Week start applies to the calendar. Only Month view is available; dates use your device’s time zone.',
+            style: T.muted(T.caption),
+          ),
           _pair(
             Labeled(
               'Week starts on',
               PillDropdown<String>(
                 radius: 16,
                 value: d.get('weekStartsOn'),
+                enabled: !saving,
                 items: {for (final o in weekStartOptions) o: o},
                 onChanged: (v) => _update('weekStartsOn', v),
               ),
@@ -854,6 +894,7 @@ class _SettingsPageState extends State<SettingsPage> {
               PillDropdown<String>(
                 radius: 16,
                 value: d.get('defaultCalendarView'),
+                enabled: false,
                 items: {for (final o in calendarViewOptions) o: o},
                 onChanged: (v) => _update('defaultCalendarView', v),
               ),
@@ -861,7 +902,13 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           Labeled(
             'Time zone',
-            PillDropdown<String>(radius: 16, value: d.get('timeZone'), items: timeZoneOptions, onChanged: (v) => _update('timeZone', v)),
+            PillDropdown<String>(
+              enabled: false,
+              radius: 16,
+              value: d.get('timeZone'),
+              items: timeZoneOptions,
+              onChanged: (v) => _update('timeZone', v),
+            ),
           ),
         ]),
       ]),
@@ -899,23 +946,41 @@ InputDecoration _fieldDecoration({String? suffix}) {
 }
 
 class SettingsText extends StatelessWidget {
-  const SettingsText(this.label, this.value, this.onChanged, {super.key, this.email = false});
+  const SettingsText(
+    this.label,
+    this.value,
+    this.onChanged, {
+    super.key,
+    this.email = false,
+    this.enabled = true,
+    this.readOnly = false,
+    this.maxLength,
+    this.required = true,
+  });
   final String label;
   final String value;
   final ValueChanged<String> onChanged;
   final bool email;
+  final bool enabled;
+  final bool readOnly;
+  final int? maxLength;
+  final bool required;
   @override
   Widget build(BuildContext context) => Labeled(
     label,
     TextFormField(
       initialValue: value,
+      enabled: enabled,
+      readOnly: readOnly,
+      maxLength: maxLength,
       style: T.body,
       keyboardType: email ? TextInputType.emailAddress : TextInputType.text,
       decoration: _fieldDecoration(),
       onChanged: onChanged,
       validator: (v) {
         final text = (v ?? '').trim();
-        if (text.isEmpty) return 'Required';
+        if (required && text.isEmpty) return 'Required';
+        if (maxLength != null && text.length > maxLength!) return 'At most $maxLength characters';
         if (email && !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text)) return 'Enter a valid email';
         return null;
       },
@@ -924,7 +989,8 @@ class SettingsText extends StatelessWidget {
 }
 
 class SettingsNumber extends StatelessWidget {
-  const SettingsNumber(this.label, this.unit, this.min, this.max, this.value, this.onChanged, {super.key});
+  const SettingsNumber(this.label, this.unit, this.min, this.max, this.value, this.onChanged, {super.key, this.enabled = true});
+  final bool enabled;
   final String label;
   final String unit;
   final int min;
@@ -936,6 +1002,7 @@ class SettingsNumber extends StatelessWidget {
     label,
     TextFormField(
       initialValue: '$value',
+      enabled: enabled,
       style: T.body,
       keyboardType: TextInputType.number,
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -954,7 +1021,8 @@ class SettingsNumber extends StatelessWidget {
 
 /// Label + description with the black/white pill toggle from the Figma file.
 class SwitchRow extends StatelessWidget {
-  const SwitchRow(this.label, this.description, this.checked, this.onChanged, {super.key});
+  const SwitchRow(this.label, this.description, this.checked, this.onChanged, {super.key, this.enabled = true});
+  final bool enabled;
   final String label;
   final String description;
   final bool checked;
@@ -962,10 +1030,11 @@ class SwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     toggled: checked,
+    enabled: enabled,
     label: label,
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => onChanged(!checked),
+      onTap: enabled ? () => onChanged(!checked) : null,
       child: Row(
         children: [
           Expanded(
