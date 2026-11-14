@@ -1,3 +1,5 @@
+import type { UserSettings } from '../types';
+
 /**
  * Client for the Erm Actually API (see ../../api).
  *
@@ -98,6 +100,7 @@ export async function api<T>(path: string, { method = 'GET', body, auth = true }
 // ---- Response shapes (mirror api/src/routes) ----
 
 export interface ApiUser {
+  settings: Omit<UserSettings, 'displayName' | 'email'>;
   id: string;
   email: string;
   displayName: string;
@@ -195,6 +198,8 @@ export const authApi = {
   resetPassword: (token: string, password: string) =>
     api<{ message: string }>('/auth/reset-password', { method: 'POST', body: { token, password }, auth: false }),
   me: () => api<ApiUser>('/me'),
+  updateProfile: (input: { displayName: string; settings: ApiUser['settings'] }) =>
+    api<ApiUser>('/me', { method: 'PATCH', body: input }),
 };
 
 export const contactApi = {

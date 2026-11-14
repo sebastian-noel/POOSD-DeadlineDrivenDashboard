@@ -5,11 +5,10 @@ import { HomeTopNav } from './components/HomeTopNav';
 import { NewTaskModal } from './components/NewTaskModal';
 import { PlaceholderPage } from './components/PlaceholderPage';
 import { TopNav } from './components/TopNav';
-import { defaultSettings } from './data/preferences';
 import { useDashboardData, type NewTaskInput } from './hooks/useDashboardData';
 import { useFocusTimer } from './hooks/useFocusTimer';
 import { usePlannerSearch } from './hooks/usePlannerSearch';
-import { authApi, session, type ApiUser } from './lib/api';
+import { ApiError, authApi, session, type ApiUser } from './lib/api';
 import { buildNotifications, milestoneTitles, toDeadlines, toUiMilestones, toUiTasks } from './lib/dashboardModel';
 import { CalendarPage } from './pages/calendar/CalendarPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
@@ -48,10 +47,11 @@ interface AuthenticatedAppProps {
   onLogout: () => void;
   onSessionExpired: () => void;
   notify: (message: string) => void;
+  onProfileSaved: (user: ApiUser) => void;
 }
 
 /** The private dashboard. Mounted only while logged in, so its data is dropped on logout. */
-function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: AuthenticatedAppProps) {
+function AuthenticatedApp({ user, onLogout, onSessionExpired, notify, onProfileSaved }: AuthenticatedAppProps) {
   const [page, setPage] = useState<Page>('Dashboard');
   const [showNewTask, setShowNewTask] = useState(false);
   // Ids of notifications the user cleared; kept here so they stay cleared while switching pages.
@@ -59,12 +59,7 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
   const [hasUnread, setHasUnread] = useState(true);
   // Kept here so pressing Enter in search on Settings or Focus timer opens the dashboard filtered.
   const [search, setSearch] = useState('');
-  // Settings are only kept in the browser for now; Save doesn't send anything to the API yet.
-  const [settings, setSettings] = useState<UserSettings>(() => ({
-    ...defaultSettings,
-    displayName: user.displayName,
-    email: user.email,
-  }));
+  const settings: UserSettings = { ...user.settings, displayName: user.displayName, email: user.email };
   const data = useDashboardData(onSessionExpired);
   const matches = usePlannerSearch(page === 'Tasks' || page === 'Milestones' || page === 'Calendar' ? search : '', data.tasks, data.milestones, onSessionExpired);
 
@@ -87,9 +82,20 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
   const showUnreadDot = hasUnread && notifications.length > 0;
   const markNotificationsRead = () => setHasUnread(false);
 
-  const saveSettings = (next: UserSettings) => {
-    setSettings(next);
-    notify('Settings saved');
+  const saveSettings = async (next: UserSettings) => {
+    const token = session.token;
+    const { displayName, email, ...preferences } = next;
+    void email; // The verified login email is read-only and excluded from updates.
+    try {
+      const saved = await authApi.updateProfile({ displayName, settings: preferences });
+      // A delayed save must not restore a user who logged out or switched accounts.
+      if (session.token !== token) return;
+      onProfileSaved(saved);
+      notify('Settings saved');
+    } catch (error) {
+      if (session.token === token && error instanceof ApiError && error.status === 401) onSessionExpired();
+      throw error;
+    }
   };
 
   const createTask = async (input: NewTaskInput) => {
@@ -180,6 +186,7 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
         />
       ) : page === 'Settings' ? (
         <SettingsPage
+          key={JSON.stringify(settings)}
           settings={settings}
           onSave={saveSettings}
           search={search}
@@ -335,7 +342,7 @@ export default function App() {
 
   return (
     <>
-      <AuthenticatedApp user={user} onLogout={logout} onSessionExpired={onSessionExpired} notify={setToast} />
+      <AuthenticatedApp user={user} onLogout={logout} onSessionExpired={onSessionExpired} notify={setToast} onProfileSaved={setUser} />
       {toastView}
     </>
   );

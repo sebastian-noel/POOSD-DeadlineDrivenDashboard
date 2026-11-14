@@ -32,12 +32,18 @@ export function TextField({
   onChange,
   type = 'text',
   autoComplete,
+  readOnly = false,
+  maxLength,
+  required = true,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: 'text' | 'email';
   autoComplete?: string;
+  readOnly?: boolean;
+  maxLength?: number;
+  required?: boolean;
 }) {
   const id = useId();
   return (
@@ -46,7 +52,7 @@ export function TextField({
         {label}
       </label>
       <div className="field-control">
-        <input id={id} type={type} value={value} autoComplete={autoComplete} required onChange={(e) => onChange(e.target.value)} />
+        <input id={id} type={type} value={value} autoComplete={autoComplete} readOnly={readOnly} maxLength={maxLength} required={required} onChange={(e) => onChange(e.target.value)} />
       </div>
     </div>
   );
@@ -140,10 +146,12 @@ export function SwitchRow({
   description,
   checked,
   onChange,
+  disabled = false,
 }: {
   label: string;
   description: string;
   checked: boolean;
+  disabled?: boolean;
   onChange: (checked: boolean) => void;
 }) {
   const labelId = useId();
@@ -161,6 +169,7 @@ export function SwitchRow({
       <button
         type="button"
         role="switch"
+        disabled={disabled}
         aria-checked={checked}
         aria-labelledby={labelId}
         aria-describedby={descriptionId}
