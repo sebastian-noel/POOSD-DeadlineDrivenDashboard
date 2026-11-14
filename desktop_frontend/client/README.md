@@ -33,11 +33,11 @@ Always run `npm install` inside the `desktop_frontend/client` directory. Running
 
 ## Planner integration checks
 
-Tasks and Milestones share the signed-in user's API records with the dashboard. Task creation,
-completion, milestone creation and progress persist in MongoDB. Both pages use `/api/v1/search`
+Tasks, Milestones and Calendar share the signed-in user's API records with the dashboard. Task creation,
+completion, milestone creation and progress persist in MongoDB. All three pages use `/api/v1/search`
 for partial title searches of two or more characters. Undated, overdue and due-today tasks appear
-in the current work list; future tasks appear in Upcoming. Calendar, the standalone timer and
-Settings are separate integration work.
+in the current work list; future tasks appear in Upcoming. Calendar maps saved due dates into local
+calendar days; undated tasks appear today and undated milestones stay on the Milestones page. The standalone timer and Settings are separate integration work.
 
 Run the real-browser regression suite from `desktop_frontend/client`:
 
@@ -56,5 +56,6 @@ An existing Chrome executable can be selected with `PLAYWRIGHT_CHROMIUM_EXECUTAB
 
 Coverage includes persistence after navigation/reload, cross-account isolation, server search,
 failed-save rollback, preserving failed creation drafts, Next due completion, and lists larger
-than one API page. CI runs the same suite after lint and build. Playwright saves a trace on
-failure in the ignored `test-results/` directory.
+than one API page. Calendar checks also cover task creation, completion, local dates and midnight
+rollover, server search, failed saves, navigation and week-start preferences. CI runs the same suite
+after lint and build. Playwright saves a trace on failure in the ignored `test-results/` directory.

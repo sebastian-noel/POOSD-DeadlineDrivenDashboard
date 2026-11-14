@@ -4,32 +4,27 @@ import { NewTaskModal } from '../../components/NewTaskModal';
 import { NotificationsMenu } from '../../components/NotificationsMenu';
 import { PageHeader } from '../../components/PageHeader';
 import { SearchPill } from '../../components/SearchPill';
-import { SAMPLE_CALENDAR_TODAY, sampleCalendarMilestones } from '../../data/sampleCalendar';
-import { SAMPLE_MODAL_MILESTONES, plannedTaskFromInput, sampleTasks } from '../../data/sampleTasks';
-import { daysUntil, dueLabel, fromDateKey, toDateKey } from '../../lib/dates';
-import type { CalendarEvent, Notification, Page, PlannedTask, WeekStart } from '../../types';
+import { PlannerFeedback } from '../../components/PlannerFeedback';
+import type { DashboardData } from '../../hooks/useDashboardData';
+import type { PlannerSearch } from '../../hooks/usePlannerSearch';
+import { useToday } from '../../hooks/useToday';
+import { toCalendarEvents } from '../../lib/calendarModel';
+import { daysUntil, dueLabel, formatShortDate, fromDateKey, toDateKey } from '../../lib/dates';
+import type { CalendarEvent, Notification, Page, WeekStart } from '../../types';
 import { CalendarKey, MonthGrid } from './MonthGrid';
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
-/** Tasks go on their due date; a task with no due date is planned for today. */
-function taskEvents(tasks: PlannedTask[], today: Date): CalendarEvent[] {
-  return tasks.map((t) => ({
-    id: t.id,
-    title: t.label,
-    date: toDateKey(t.due ? new Date(t.due.iso) : today),
-    kind: 'task',
-    done: t.done,
-    project: t.tag,
-  }));
-}
-
-function NextDeadlines({ today, onOpenTasks }: { today: Date; onOpenTasks: () => void }) {
+function NextDeadlines({ events, today, onOpenTasks }: {
+  events: CalendarEvent[];
+  today: Date;
+  onOpenTasks: () => void;
+}) {
   const headingId = useId();
   const todayKey = toDateKey(today);
-  const upcoming = sampleCalendarMilestones
+  const upcoming = events
     .filter((m) => m.kind === 'milestone' && m.status !== 'Completed' && m.date >= todayKey)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 3);
@@ -72,6 +67,8 @@ function NextDeadlines({ today, onOpenTasks }: { today: Date; onOpenTasks: () =>
 }
 
 interface CalendarPageProps {
+  data: DashboardData;
+  matches: PlannerSearch;
   /** From Settings: the grid's first column. */
   weekStartsOn: WeekStart;
   search: string;
@@ -86,11 +83,11 @@ interface CalendarPageProps {
 }
 
 /**
- * Front-end design of the Calendar page (month view). It runs on sample data and keeps
- * new tasks in the browser only; the API team will connect it by mapping real tasks and
- * milestones into `CalendarEvent`s.
+ * Month view of the same saved tasks and milestones used by the other planning pages.
  */
 export function CalendarPage({
+  data,
+  matches,
   weekStartsOn,
   search,
   onSearchChange,
@@ -101,27 +98,31 @@ export function CalendarPage({
   onNavigate,
   notify,
 }: CalendarPageProps) {
-  const today = SAMPLE_CALENDAR_TODAY;
-  const [tasks, setTasks] = useState<PlannedTask[]>(sampleTasks);
+  const today = useToday();
   const [month, setMonth] = useState(() => startOfMonth(today));
   const [showNewTask, setShowNewTask] = useState(false);
   const headingId = useId();
 
-  const query = search.trim().toLowerCase();
-  const events = [...sampleCalendarMilestones, ...taskEvents(tasks, today)].filter(
-    (e) => !query || [e.title, e.project].some((text) => text.toLowerCase().includes(query)),
+  const events = toCalendarEvents(data.tasks, data.milestones, data.summary?.milestones ?? [], today).filter(
+    (event) => event.kind === 'task'
+      ? matches.taskIds === null || matches.taskIds.has(event.id)
+      : matches.milestoneIds === null || matches.milestoneIds.has(event.id),
   );
+  const monthKey = toDateKey(month).slice(0, 7);
+  const hasMonthEvents = events.some((event) => event.date.startsWith(monthKey));
 
   const changeMonth = (by: number) => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + by, 1));
 
   // Jump to the month the new task lands in so it's visible right away.
   const addTask: ComponentProps<typeof NewTaskModal>['onCreate'] = async (input) => {
-    const added = plannedTaskFromInput(input);
-    setTasks((prev) => [...prev, added]);
-    setMonth(startOfMonth(added.due ? new Date(added.due.iso) : today));
+    await data.createTask(input);
+    setMonth(startOfMonth(input.dueAt ? new Date(input.dueAt) : today));
+    onSearchChange('');
     setShowNewTask(false);
-    notify(`Added “${input.title}” to ${added.due?.label ?? 'today'}`);
+    notify(`Added “${input.title}” to ${input.dueAt ? formatShortDate(input.dueAt) : 'today'}`);
   };
+
+  if (data.loading || (data.error && !data.summary)) return <PlannerFeedback data={data} matches={matches} />;
 
   return (
     <>
@@ -142,6 +143,7 @@ export function CalendarPage({
         </button>
       </PageHeader>
 
+      <PlannerFeedback data={data} matches={matches} />
       <div className="d-flex flex-column gap-4">
         <section className="panel d-flex flex-column" style={{ gap: 18 }} aria-labelledby={headingId}>
           <header className="cal-toolbar">
@@ -163,6 +165,11 @@ export function CalendarPage({
             </div>
             <CalendarKey />
           </header>
+          {!hasMonthEvents && !matches.searching && !matches.error && (
+            <p role="status" className="t-body text-ink-secondary m-0">
+              {search.trim().length >= 2 ? 'No matching tasks or milestones this month.' : 'No tasks or milestones scheduled this month.'}
+            </p>
+          )}
           <MonthGrid
             month={month}
             today={today}
@@ -172,10 +179,10 @@ export function CalendarPage({
           />
         </section>
 
-        <NextDeadlines today={today} onOpenTasks={() => onNavigate('Tasks')} />
+        <NextDeadlines events={events} today={today} onOpenTasks={() => onNavigate('Tasks')} />
       </div>
 
-      <NewTaskModal show={showNewTask} onClose={() => setShowNewTask(false)} milestones={SAMPLE_MODAL_MILESTONES} onCreate={addTask} />
+      <NewTaskModal show={showNewTask} onClose={() => setShowNewTask(false)} milestones={data.milestones} onCreate={addTask} />
     </>
   );
 }

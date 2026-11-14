@@ -1,23 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
-const API = 'http://127.0.0.1:4301';
-const password = 'BrowserTestPassword123!';
-
-async function signIn(page: Page, email = 'alice@example.com') {
-  const response = await page.request.post(`${API}/api/v1/auth/login`, { data: { email, password } });
-  expect(response.status()).toBe(200);
-  const { accessToken } = await response.json();
-  await page.addInitScript((token) => localStorage.setItem('token', token), accessToken);
-  await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Log out', exact: true })).toBeVisible();
-  return { Authorization: `Bearer ${accessToken}` };
-}
-
-async function navigate(page: Page, name: string) {
-  await page.getByRole('button', { name, exact: true }).first().click();
-  await expect(page.getByRole('button', { name, exact: true }).first()).toHaveAttribute('aria-current', 'page');
-  if (name !== 'Dashboard') await expect(page.getByRole('heading', { name, exact: true }).first()).toBeVisible();
-}
+import { API, navigate, signIn } from './planner-helpers.ts';
 
 test.beforeEach(async ({ request }) => {
   expect((await request.post(`${API}/__test/reset`)).ok()).toBeTruthy();
@@ -122,6 +105,14 @@ test('planning lists load records beyond the first API page', async ({ page }) =
   await expect(page.getByRole('checkbox', { name: 'Mark "Task 100" as done', exact: true })).toBeVisible();
   await navigate(page, 'Milestones');
   await expect(page.getByText('Milestone 100', { exact: true })).toBeVisible();
+  await navigate(page, 'Calendar');
+  await page.getByRole('button', { name: 'New task', exact: true }).click();
+  await page.getByLabel('TASK', { exact: true }).fill('Calendar pagination probe');
+  await page.getByLabel('MILESTONE', { exact: true }).selectOption({ label: 'Milestone 100' });
+  await page.getByLabel('DUE DATE (OPTIONAL)').fill('2099-04-11');
+  await page.getByRole('button', { name: 'Add task', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page.getByTitle('Task 100', { exact: true })).toBeVisible();
 });
 
 

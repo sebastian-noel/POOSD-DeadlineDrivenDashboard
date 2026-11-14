@@ -65,7 +65,7 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
     email: user.email,
   }));
   const data = useDashboardData(onSessionExpired);
-  const matches = usePlannerSearch(page === 'Tasks' || page === 'Milestones' ? search : '', data.tasks, data.milestones, onSessionExpired);
+  const matches = usePlannerSearch(page === 'Tasks' || page === 'Milestones' || page === 'Calendar' ? search : '', data.tasks, data.milestones, onSessionExpired);
 
   // Built here, not in DashboardPage, so the bell on every page shows the same list.
   const titles = useMemo(() => milestoneTitles(data.milestones), [data.milestones]);
@@ -154,6 +154,8 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
         />
       ) : page === 'Calendar' ? (
         <CalendarPage
+          data={data}
+          matches={matches}
           weekStartsOn={settings.weekStartsOn}
           search={search}
           onSearchChange={setSearch}

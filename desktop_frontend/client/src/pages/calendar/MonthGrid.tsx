@@ -130,7 +130,12 @@ export function MonthGrid({ month, today, weekStartsOn, events, onShowMore }: Mo
               .join(' ');
 
             return (
-              <li key={key} className={className} aria-current={isToday ? 'date' : undefined}>
+              <li
+                key={key}
+                className={className}
+                aria-label={day.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                aria-current={isToday ? 'date' : undefined}
+              >
                 <span className="cal-date">
                   <span aria-hidden="true">{label}</span>
                   <span className="visually-hidden">
@@ -140,7 +145,7 @@ export function MonthGrid({ month, today, weekStartsOn, events, onShowMore }: Mo
                 {shown.length > 0 && (
                   <ul className="cal-events list-unstyled m-0">
                     {shown.map((event) => (
-                      <CalendarItem key={event.id} event={event} />
+                      <CalendarItem key={`${event.kind}:${event.id}`} event={event} />
                     ))}
                   </ul>
                 )}
