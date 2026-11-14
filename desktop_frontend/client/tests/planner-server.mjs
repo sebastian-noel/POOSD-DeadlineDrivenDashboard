@@ -1,5 +1,7 @@
 // Isolated test server. Never loads .env or connects to the team's Atlas cluster.
 import { createRequire } from 'node:module';
+import { FocusSession } from '../../../api/dist/models/focus-session.js';
+import { User } from '../../../api/dist/models/user.js';
 import { createApp } from '../../../api/dist/app.js';
 
 const requireApi = createRequire(new URL('../../../api/package.json', import.meta.url));
@@ -24,6 +26,23 @@ app.post('/__test/reset', async (_req, res) => {
   })));
   res.json({ ok: true });
 });
+// Seed elapsed time only inside the temporary test database; production has no such route.
+app.post('/__test/focus', async (req, res) => {
+  const user = await User.findOne({ email: req.body.email ?? 'alice@example.com' });
+  if (!user) return res.status(404).json({ error: 'TEST_USER_NOT_FOUND' });
+  const status = req.body.status ?? 'running';
+  const elapsedMs = (req.body.elapsedSeconds ?? 0) * 1000;
+  const session = await FocusSession.create({
+    owner: user._id, task: req.body.taskId ?? null, status,
+    targetSeconds: req.body.targetSeconds ?? 60,
+    active: status === 'running' || status === 'paused',
+    accumulatedMs: status === 'running' ? 0 : elapsedMs,
+    lastStartedAt: status === 'running' ? new Date(Date.now() - elapsedMs) : null,
+    completedAt: status === 'completed' ? new Date() : null,
+  });
+  res.status(201).json({ id: session.id });
+});
+await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
 const server = app.listen(4301, '127.0.0.1');
 async function stop() {
   await new Promise((resolve) => server.close(resolve));

@@ -236,6 +236,7 @@ export const dashboardApi = {
 };
 
 export const focusApi = {
+  listAll: () => allPages<ApiFocusSession>('/focus-sessions'),
   active: () => api<{ session: ApiFocusSession | null }>('/focus-sessions/active'),
   list: () => api<Paginated<ApiFocusSession>>('/focus-sessions?limit=50'),
   start: (input: { taskId?: string | null; targetSeconds: number }) =>

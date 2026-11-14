@@ -7,6 +7,7 @@ import { PlaceholderPage } from './components/PlaceholderPage';
 import { TopNav } from './components/TopNav';
 import { defaultSettings } from './data/preferences';
 import { useDashboardData, type NewTaskInput } from './hooks/useDashboardData';
+import { useFocusTimer } from './hooks/useFocusTimer';
 import { usePlannerSearch } from './hooks/usePlannerSearch';
 import { authApi, session, type ApiUser } from './lib/api';
 import { buildNotifications, milestoneTitles, toDeadlines, toUiMilestones, toUiTasks } from './lib/dashboardModel';
@@ -76,6 +77,13 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
     );
   }, [data.tasks, data.summary, titles, dismissedNotificationIds]);
   const currentTask = useMemo(() => toUiTasks(data.tasks, titles).find((t) => !t.done), [data.tasks, titles]);
+  const timer = useFocusTimer({
+    plan: settings, currentTaskId: currentTask?.id ?? null,
+    onSessionExpired, onSessionComplete: data.refreshSummary,
+  });
+  const focusTask = timer.hasSession
+    ? toUiTasks(data.tasks, titles).find((task) => task.id === timer.taskId)
+    : currentTask;
   const showUnreadDot = hasUnread && notifications.length > 0;
   const markNotificationsRead = () => setHasUnread(false);
 
@@ -103,6 +111,8 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
 
       {page === 'Dashboard' ? (
         <DashboardPage
+          timer={timer}
+          focusTask={focusTask}
           user={user}
           data={data}
           onNewTask={() => setShowNewTask(true)}
@@ -142,7 +152,9 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
         />
       ) : page === 'Focus timer' ? (
         <FocusTimerPage
-          currentTask={currentTask}
+          timer={timer}
+          tasks={data.tasks}
+          currentTask={focusTask}
           onOpenSettings={() => setPage('Settings')}
           search={search}
           onSearchChange={setSearch}
