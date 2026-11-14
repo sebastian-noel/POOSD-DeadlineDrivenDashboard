@@ -5,14 +5,12 @@ import { NewTaskModal } from '../../components/NewTaskModal';
 import { NotificationsMenu } from '../../components/NotificationsMenu';
 import { PageHeader } from '../../components/PageHeader';
 import { SearchPill } from '../../components/SearchPill';
+import { PlannerFeedback } from '../../components/PlannerFeedback';
+import type { DashboardData } from '../../hooks/useDashboardData';
+import type { PlannerSearch } from '../../hooks/usePlannerSearch';
+import { plannedTasks } from '../../lib/plannerModel';
+import { todayLabel } from '../../lib/dates';
 import { FOCUS_PLAN } from '../../data/preferences';
-import {
-  SAMPLE_DONE_EARLIER_THIS_WEEK,
-  SAMPLE_MODAL_MILESTONES,
-  SAMPLE_TODAY_LABEL,
-  plannedTaskFromInput,
-  sampleTasks,
-} from '../../data/sampleTasks';
 import type { Notification, Page, PlannedTask, Task } from '../../types';
 import { TaskRow } from '../dashboard/TasksCard';
 
@@ -33,6 +31,8 @@ function byDueDate(a: PlannedTask, b: PlannedTask): number {
 }
 
 interface TasksPageProps {
+  data: DashboardData;
+  matches: PlannerSearch;
   search: string;
   onSearchChange: (value: string) => void;
   notifications: Notification[];
@@ -45,10 +45,11 @@ interface TasksPageProps {
 }
 
 /**
- * Front-end design of the Tasks page. It runs on sample data and keeps changes
- * (new tasks, check-offs) in the browser only; the API team will connect it.
+ * Tasks share API data and mutations with the dashboard and Milestones page.
  */
 export function TasksPage({
+  data,
+  matches,
   search,
   onSearchChange,
   notifications,
@@ -58,7 +59,7 @@ export function TasksPage({
   onNavigate,
   notify,
 }: TasksPageProps) {
-  const [tasks, setTasks] = useState<PlannedTask[]>(sampleTasks);
+  const tasks = plannedTasks(data.tasks, data.milestones);
   const [filter, setFilter] = useState<TaskFilter>('all');
   const [showNewTask, setShowNewTask] = useState(false);
   const listHeadingId = useId();
@@ -70,14 +71,14 @@ export function TasksPage({
   const today = tasks.filter((t) => !t.due);
   const upcoming = tasks.filter((t) => t.due).sort(byDueDate);
   const doneToday = today.filter((t) => t.done).length;
-  const doneThisWeek = SAMPLE_DONE_EARLIER_THIS_WEEK + tasks.filter((t) => t.done).length;
+  const doneThisWeek = data.summary?.tasks.completedLast7Days ?? 0;
   // The next open task: today's list first, then the soonest upcoming one.
   const focusNext = today.find((t) => !t.done) ?? upcoming.find((t) => !t.done);
 
   const query = search.trim().toLowerCase();
   const shows = (t: PlannedTask) =>
     (filter === 'all' || (filter === 'done') === t.done) &&
-    (!query || [t.label, t.tag, t.milestone].some((text) => text.toLowerCase().includes(query)));
+    (matches.taskIds === null || matches.taskIds.has(t.id));
   const todayVisible = today.filter(shows);
   const upcomingVisible = upcoming.filter(shows);
 
@@ -89,26 +90,22 @@ export function TasksPage({
         ? 'All caught up.'
         : 'No tasks yet. Add one with New task.';
 
-  const toggleTask = (id: string) => setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
+  const toggleTask = (id: string) => void data.toggleTask(id);
 
-  // Without a due date a new task joins today's list (after the open ones); with one it goes to Upcoming.
+  // The server saves the task and refreshes every connected planning page.
   const addTask: ComponentProps<typeof NewTaskModal>['onCreate'] = async (input) => {
-    const added = plannedTaskFromInput(input);
-    setTasks((prev) => {
-      if (added.due) return [...prev, added];
-      const lastOpenToday = prev.findLastIndex((t) => !t.due && !t.done);
-      const at = lastOpenToday + 1;
-      return [...prev.slice(0, at), added, ...prev.slice(at)];
-    });
+    await data.createTask(input);
     setShowNewTask(false);
     notify(`Added “${input.title}” to your tasks`);
   };
+
+  if (data.loading || (data.error && !data.summary)) return <PlannerFeedback data={data} matches={matches} />;
 
   return (
     <>
       <PageHeader
         title="Tasks"
-        subtitle={`${today.length} task${today.length === 1 ? '' : 's'} planned today · ${doneToday} already complete`}
+        subtitle={`${today.length} task${today.length === 1 ? '' : 's'} due today, overdue, or undated · ${doneToday} already complete`}
       >
         <SearchPill value={search} onChange={onSearchChange} />
         <NotificationsMenu
@@ -123,6 +120,7 @@ export function TasksPage({
         </button>
       </PageHeader>
 
+      <PlannerFeedback data={data} matches={matches} />
       <div className="row g-4">
         <div className="col-12 col-xl">
           <section className="panel d-flex flex-column" style={{ gap: 22 }} aria-labelledby={listHeadingId}>
@@ -150,13 +148,13 @@ export function TasksPage({
               <div className="d-flex flex-column" style={{ gap: 7 }}>
                 <div className="d-flex align-items-center justify-content-between gap-3">
                   <h3 id={todayHeadingId} className="t-title m-0">
-                    Today
+                    Today and overdue
                   </h3>
-                  <span className="t-caption-bold text-ink-secondary">{SAMPLE_TODAY_LABEL}</span>
+                  <span className="t-caption-bold text-ink-secondary">{todayLabel()}</span>
                 </div>
                 <ul className="task-list task-list-ruled list-unstyled m-0" aria-labelledby={todayHeadingId}>
                   {todayVisible.map((t) => (
-                    <TaskRow key={t.id} task={toRow(t)} onToggle={toggleTask} />
+                    <TaskRow key={t.id} task={toRow(t)} onToggle={toggleTask} disabled={data.pendingTaskIds.has(t.id)} />
                   ))}
                 </ul>
               </div>
@@ -173,7 +171,7 @@ export function TasksPage({
                 <ul className="task-list list-unstyled m-0" aria-labelledby={upcomingHeadingId}>
                   {upcomingVisible.map((t) => (
                     <li key={t.id} className="upcoming-row">
-                      <TaskRow as="div" task={toRow(t)} onToggle={toggleTask} />
+                      <TaskRow as="div" task={toRow(t)} onToggle={toggleTask} disabled={data.pendingTaskIds.has(t.id)} />
                       <span className="upcoming-due t-caption-bold text-ink-secondary">{t.due?.label}</span>
                     </li>
                   ))}
@@ -182,7 +180,7 @@ export function TasksPage({
             )}
 
             {todayVisible.length === 0 && upcomingVisible.length === 0 && (
-              <p className="t-body text-ink-secondary text-center py-4 m-0">{emptyText}</p>
+              <p className="t-body text-ink-secondary text-center py-4 m-0">{matches.searching ? 'Searching tasks...' : matches.error ? 'Search is unavailable.' : emptyText}</p>
             )}
           </section>
         </div>
@@ -190,7 +188,7 @@ export function TasksPage({
         <div className="col-12 col-xl-auto col-side col-side-exact d-flex flex-column gap-4">
           <section className="panel h-auto d-flex flex-column" style={{ gap: 14 }} aria-labelledby={progressHeadingId}>
             <h2 id={progressHeadingId} className="t-heading m-0">
-              Today’s progress
+              Current work progress
             </h2>
             <div className="d-flex align-items-center" style={{ gap: 10 }}>
               <span className="t-stat text-nowrap">
@@ -198,7 +196,7 @@ export function TasksPage({
               </span>
               <span className="t-body text-ink-secondary">tasks complete</span>
             </div>
-            {/* One segment per task planned today, finished ones filled in from the left. */}
+            {/* One segment per task due today, overdue, or undated, finished ones filled in from the left. */}
             <div className="progress-segments" aria-hidden="true">
               {today.map((t, i) => (
                 <span key={t.id} className={`progress-segment${i < doneToday ? ' done' : ''}`} />
@@ -246,7 +244,7 @@ export function TasksPage({
         </div>
       </div>
 
-      <NewTaskModal show={showNewTask} onClose={() => setShowNewTask(false)} milestones={SAMPLE_MODAL_MILESTONES} onCreate={addTask} />
+      <NewTaskModal show={showNewTask} onClose={() => setShowNewTask(false)} milestones={data.milestones} onCreate={addTask} />
     </>
   );
 }

@@ -14,16 +14,18 @@ interface TaskRowProps {
   onToggle: (id: string) => void;
   /** Render as a div when the row sits inside another list item (Tasks page, Upcoming). */
   as?: 'li' | 'div';
+  disabled?: boolean;
 }
 
 /** A checkable task with its tag. Also used on the Milestones and Tasks pages. */
-export function TaskRow({ task, onToggle, as: Row = 'li' }: TaskRowProps) {
+export function TaskRow({ task, onToggle, as: Row = 'li', disabled = false }: TaskRowProps) {
   return (
     <Row className="task-row">
       <button
         type="button"
         role="checkbox"
         aria-checked={task.done}
+        disabled={disabled}
         aria-label={`Mark "${task.label}" as ${task.done ? 'not done' : 'done'}`}
         className={`task-check${task.done ? ' checked' : ''}`}
         onClick={() => onToggle(task.id)}

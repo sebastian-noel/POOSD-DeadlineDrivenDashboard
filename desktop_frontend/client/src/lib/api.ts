@@ -202,13 +202,25 @@ export const contactApi = {
     api<{ id: string; message: string }>('/contact', { method: 'POST', body: input, auth: false }),
 };
 
+/** Follow server pagination so planning pages do not silently drop records after the first 100. */
+async function allPages<T>(path: string): Promise<T[]> {
+  const items: T[] = [];
+  for (let page = 1; ; page += 1) {
+    const result = await api<Paginated<T>>(`${path}?limit=100&page=${page}`);
+    items.push(...result.items);
+    if (items.length >= result.total || result.items.length === 0) return items;
+  }
+}
+
 export const milestonesApi = {
+  listAll: () => allPages<ApiMilestone>('/milestones'),
   list: () => api<Paginated<ApiMilestone>>('/milestones?limit=100'),
   create: (input: { title: string; description?: string; dueAt?: string | null }) =>
     api<ApiMilestone>('/milestones', { method: 'POST', body: input }),
 };
 
 export const tasksApi = {
+  listAll: () => allPages<ApiTask>('/tasks'),
   list: () => api<Paginated<ApiTask>>('/tasks?limit=100'),
   create: (input: { milestoneId: string; title: string; notes?: string; dueAt?: string | null; status?: ApiTaskStatus }) =>
     api<ApiTask>('/tasks', { method: 'POST', body: input }),
