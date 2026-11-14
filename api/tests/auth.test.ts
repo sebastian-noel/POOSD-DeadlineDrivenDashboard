@@ -78,7 +78,9 @@ test('register, verify, login, and reset password', async () => {
 
   const verification = await request(`/api/v1/auth/verify-email?token=${verificationToken}`)
   assert.equal(verification.status, 200)
-  assert.equal((await request(`/api/v1/auth/verify-email?token=${verificationToken}`)).status, 400)
+  // Opening the link again (a link scanner, or the same email on a second device) must still succeed.
+  assert.equal((await request(`/api/v1/auth/verify-email?token=${verificationToken}`)).status, 200)
+  assert.equal((await request(`/api/v1/auth/verify-email?token=${'0'.repeat(64)}`)).status, 400)
   assert.equal((await request('/api/v1/auth/login', 'POST', { email, password: 'wrong-password-123' })).status, 401)
 
   const login = await request('/api/v1/auth/login', 'POST', { email, password })

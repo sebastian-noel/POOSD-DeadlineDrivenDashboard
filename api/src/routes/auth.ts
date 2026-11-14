@@ -82,16 +82,20 @@ export function authRoutes(config: Config, mailer: Mailer) {
     res.status(202).json({ message: 'If that account still needs verification, a new email has been sent.' })
   })
 
-  /** Target of the emailed link. Redirects to the web app when `WEB_APP_URL` is configured, otherwise answers with JSON. */
+  /**
+   * Target of the emailed link. Redirects to the web app when `WEB_APP_URL` is configured, otherwise answers with JSON.
+   * The link keeps working until it expires: mail clients and link scanners often fetch it before the person does,
+   * and people open the same email on more than one device. A repeat visit must land on "verified", not on an error.
+   */
   router.get('/verify-email', async (req, res) => {
     const parsed = tokenSchema.safeParse(req.query)
     const user = parsed.success
-      ? await User.findOneAndUpdate(
-          { verificationTokenHash: hashToken(parsed.data.token), verificationExpiresAt: { $gt: new Date() }, emailVerifiedAt: null },
-          { $set: { emailVerifiedAt: new Date(), verificationTokenHash: null, verificationExpiresAt: null } },
-          { new: true },
-        )
+      ? await User.findOne({ verificationTokenHash: hashToken(parsed.data.token), verificationExpiresAt: { $gt: new Date() } })
       : null
+    if (user && !user.emailVerifiedAt) {
+      user.emailVerifiedAt = new Date()
+      await user.save()
+    }
     const redirect = webAppLink(config, { verified: user ? '1' : '0' })
     if (redirect) {
       res.redirect(302, redirect)

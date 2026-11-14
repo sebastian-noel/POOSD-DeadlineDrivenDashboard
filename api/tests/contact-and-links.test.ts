@@ -91,9 +91,13 @@ test('email links point at the web app and verification redirects there', async 
   const verified = await request(`/api/v1/auth/verify-email?token=${verificationToken}`)
   assert.equal(verified.status, 302)
   assert.equal(verified.location, 'https://app.example.com/?verified=1')
+  // A repeat visit (link scanner, second device) still lands on "verified"; a bad token does not.
   const again = await request(`/api/v1/auth/verify-email?token=${verificationToken}`)
   assert.equal(again.status, 302)
-  assert.equal(again.location, 'https://app.example.com/?verified=0')
+  assert.equal(again.location, 'https://app.example.com/?verified=1')
+  const bad = await request(`/api/v1/auth/verify-email?token=${'0'.repeat(64)}`)
+  assert.equal(bad.status, 302)
+  assert.equal(bad.location, 'https://app.example.com/?verified=0')
 
   const login = await request('/api/v1/auth/login', 'POST', { email, password })
   assert.equal(login.status, 200)
