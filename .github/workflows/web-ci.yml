@@ -7,10 +7,12 @@ on:
   push:
     paths:
       - 'desktop_frontend/**'
+      - 'api/**'
       - '.github/workflows/web-ci.yml'
   pull_request:
     paths:
       - 'desktop_frontend/**'
+      - 'api/**'
       - '.github/workflows/web-ci.yml'
 
 jobs:
@@ -30,3 +32,7 @@ jobs:
       - run: npm run lint
       # `build` runs tsc -b (type-check) and then vite build
       - run: npm run build
+      # Browser tests use the real API with a temporary MongoDB, never hosted credentials.
+      - run: npm ci --prefix ../../api
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
