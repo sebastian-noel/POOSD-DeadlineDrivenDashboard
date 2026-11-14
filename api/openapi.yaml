@@ -73,6 +73,7 @@ paths:
                       id: { type: string }
                       email: { type: string, format: email }
                       displayName: { type: string }
+                      settings: { $ref: '#/components/schemas/SettingsPatch' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { description: Invalid email or password }
         '403': { description: Email has not been verified }
@@ -100,7 +101,7 @@ paths:
           required: true
           schema: { type: string }
       responses:
-        '302': { description: When WEB_APP_URL is configured, redirects to the web app with ?verified=1 (success) or ?verified=0 (invalid, expired, or already used token) }
+        '302': { description: "When WEB_APP_URL is configured, redirects to the web app with ?verified=1 (success) or ?verified=0 (invalid, expired, or already used token)" }
         '200': { description: Email verified (JSON answer when WEB_APP_URL is not configured) }
         '400': { description: Invalid or expired token }
   /auth/forgot-password:
@@ -151,7 +152,7 @@ paths:
                 email: { type: string, format: email }
                 subject: { type: string, minLength: 1, maxLength: 150 }
                 message: { type: string, minLength: 1, maxLength: 4000 }
-            example: { email: student@ucf.edu, subject: Feature idea, message: Could tasks have subtasks? }
+            example: { email: student@ucf.edu, subject: Feature idea, message: "Could tasks have subtasks?" }
       responses:
         '202':
           description: Message received
@@ -169,22 +170,28 @@ paths:
           description: Account summary
           content:
             application/json:
-              example: { id: 507f1f77bcf86cd799439011, email: demo@example.com, displayName: Demo User }
+              schema: { $ref: '#/components/schemas/Account' }
         '401': { $ref: '#/components/responses/Unauthorized' }
     patch:
       tags: [Authentication]
-      summary: Update your display name
+      summary: Update your display name and preferences atomically
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [displayName]
+              additionalProperties: false
+              minProperties: 1
               properties:
-                displayName: { type: string, minLength: 1, maxLength: 80 }
+                displayName: { type: string, maxLength: 80 }
+                settings: { $ref: '#/components/schemas/SettingsPatch' }
       responses:
-        '200': { description: Profile updated }
+        '200':
+          description: Profile and preferences saved together; omitted fields are preserved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Account' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /milestones:
@@ -403,6 +410,30 @@ components:
         application/json:
           example: { error: UNAUTHORIZED }
   schemas:
+    Account:
+      type: object
+      required: [id, email, displayName, settings]
+      properties:
+        id: { type: string }
+        email: { type: string, format: email, readOnly: true }
+        displayName: { type: string, maxLength: 80 }
+        settings: { $ref: '#/components/schemas/SettingsPatch' }
+    SettingsPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: All fields returned on login and GET/PATCH me. PATCH accepts any nonempty subset. Reminder delivery, calendar view selection, and time-zone overrides are reserved preferences; saving them does not enable those features.
+      properties:
+        deadlineReminders: { type: boolean, default: true }
+        remindBefore: { type: string, enum: ['1 hour before', '3 hours before', '1 day before', '2 days before', '1 week before'], default: '1 day before' }
+        dailySummary: { type: boolean, default: false }
+        focusMinutes: { type: integer, minimum: 1, maximum: 180, default: 25 }
+        shortBreakMinutes: { type: integer, minimum: 1, maximum: 60, default: 5 }
+        longBreakMinutes: { type: integer, minimum: 1, maximum: 120, default: 15 }
+        longBreakAfterSessions: { type: integer, minimum: 1, maximum: 12, default: 4 }
+        weekStartsOn: { type: string, enum: [Sunday, Monday], default: Sunday }
+        defaultCalendarView: { type: string, enum: [Month, Week, Day], default: Month }
+        timeZone: { type: string, enum: [America/New_York, America/Chicago, America/Denver, America/Phoenix, America/Los_Angeles, America/Anchorage, Pacific/Honolulu, UTC], default: America/New_York }
     Credentials:
       type: object
       required: [email, password]
