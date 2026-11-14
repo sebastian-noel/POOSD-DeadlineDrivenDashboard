@@ -13,10 +13,10 @@ The mobile version of the Deadline Driven Dashboard. It talks to the same Expres
 | Settings | Profile, Notifications, Focus preferences, Calendar preferences | saved on the phone |
 | Calendar | month grid (week start from Settings), milestone chips by status, task dots, "+N" / done counts, tap a day to list it, Next deadlines | API data |
 
-Differences from the web app, on purpose:
-- Milestones, Tasks and Calendar use real API data (those web pages still run on sample data).
+Web and mobile behavior:
+- Milestones, Tasks and Calendar use real API data in both clients.
 - The web calendar grid scrolls sideways on a phone; the app fits the month on screen with markers per day, and tapping a day lists its milestones and tasks under the grid.
-- One focus timer is shared by the dashboard card and the Focus timer page, so it keeps running when you switch pages, and it uses the lengths from Settings.
+- Both clients now share one focus timer between their dashboard card and Focus timer page, using the lengths from their local Settings. Active focus sessions use the same API across devices.
 - Settings are saved on the phone (the API has no settings route yet; the web keeps them only until reload).
 
 ## Code

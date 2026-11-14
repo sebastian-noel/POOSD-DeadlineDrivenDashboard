@@ -37,7 +37,7 @@ Tasks, Milestones and Calendar share the signed-in user's API records with the d
 completion, milestone creation and progress persist in MongoDB. All three pages use `/api/v1/search`
 for partial title searches of two or more characters. Undated, overdue and due-today tasks appear
 in the current work list; future tasks appear in Upcoming. Calendar maps saved due dates into local
-calendar days; undated tasks appear today and undated milestones stay on the Milestones page. The standalone timer and Settings are separate integration work.
+calendar days; undated tasks appear today and undated milestones stay on the Milestones page. Persistent Settings remain separate integration work.
 
 Run the real-browser regression suite from `desktop_frontend/client`:
 
@@ -59,3 +59,27 @@ failed-save rollback, preserving failed creation drafts, Next due completion, an
 than one API page. Calendar checks also cover task creation, completion, local dates and midnight
 rollover, server search, failed saves, navigation and week-start preferences. CI runs the same suite
 after lint and build. Playwright saves a trace on failure in the ignored `test-results/` directory.
+
+
+## Shared focus sessions
+
+The dashboard card and Focus timer page use one controller in the authenticated app. A focus
+session stays attached to its original task when navigating pages or checking that task off.
+Active and paused sessions are restored from the API after reload. Recent sessions and the
+completed-today count come from saved history, with pagination.
+
+Start, pause, resume and cancel wait for API confirmation; failed completion saves remain
+retryable. The countdown uses a deadline so throttled browser callbacks do not lose elapsed
+time. Returning to the app reconciles the active session with changes from another device.
+Completed focus blocks refresh the dashboard's focus statistics.
+
+The timer reads current local Settings for future focus/break lengths. An already-started focus
+block retains its server target. Breaks are local, do not create focus records, and stay shared
+between pages; refreshing the browser resets a local break. Settings themselves are not yet
+persisted to the server. After each focus block a short/long break starts; after a break the next
+focus block waits for Start.
+
+The browser suite covers session lifecycle and navigation, reload recovery, failed writes and
+retries, completion/history/statistics, account isolation, another device's session, local
+settings and long-break selection, paginated history, and delayed timer callbacks. Its elapsed
+session fixtures exist only on the loopback test server and temporary database.
