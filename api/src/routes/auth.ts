@@ -9,6 +9,7 @@ import type { Mailer } from '../lib/mailer.js'
 import { validationError } from '../lib/route-helpers.js'
 import { hashToken, newOpaqueToken } from '../lib/tokens.js'
 import { User } from '../models/user.js'
+import { accountSummary } from '../lib/settings.js'
 
 const emailSchema = z.email('Enter a valid email address').max(254, 'Email is too long')
 const passwordSchema = z
@@ -127,7 +128,7 @@ export function authRoutes(config: Config, mailer: Mailer) {
       accessToken,
       tokenType: 'Bearer',
       expiresIn: config.JWT_TTL_SECONDS,
-      user: { id: user.id, email: user.email, displayName: user.displayName },
+      user: accountSummary(user),
     })
   })
 

@@ -1,4 +1,4 @@
-import type { CalendarView, UserSettings, WeekStart } from '../types';
+import type { CalendarView, WeekStart } from '../types';
 
 /** Starting Pomodoro lengths; the shared timer uses the current Settings values. */
 export const FOCUS_PLAN = {
@@ -24,16 +24,3 @@ export const TIME_ZONE_OPTIONS = [
   { value: 'Pacific/Honolulu', label: 'Hawaii Time (Honolulu)' },
   { value: 'UTC', label: 'Coordinated Universal Time (UTC)' },
 ];
-
-/** Starting values for the Settings form; App fills in the signed-in user's name and email. */
-export const defaultSettings: UserSettings = {
-  displayName: '',
-  email: '',
-  deadlineReminders: true,
-  remindBefore: '1 day before',
-  dailySummary: false,
-  ...FOCUS_PLAN,
-  weekStartsOn: 'Sunday',
-  defaultCalendarView: 'Month',
-  timeZone: 'America/New_York',
-};

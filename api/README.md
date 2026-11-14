@@ -52,7 +52,7 @@ All routes are under `/api/v1`. Request and response bodies are JSON.
 | POST | `/auth/forgot-password` | – | Email a reset link → `202` (same response whether or not the account exists) |
 | POST | `/auth/reset-password` | – | `{ token, password }` → new password; existing JWTs are invalidated |
 | POST | `/contact` | – | Contact form `{ email, subject, message }` → `202` |
-| GET, PATCH | `/me` | JWT | Read account / update `displayName` |
+| GET, PATCH | `/me` | JWT | Read account and preferences / atomically update `displayName` and `settings` |
 | GET, POST | `/milestones` | JWT | List (paginated) / create |
 | GET, PATCH, DELETE | `/milestones/:id` | JWT | Read, update, delete (deletes its tasks) |
 | GET, POST | `/tasks` | JWT | List (filter by `milestoneId`, `status`) / create |
@@ -92,3 +92,23 @@ curl -i -X POST https://<domain>/api/v1/auth/login \
 ## Deploying
 
 The live site is `https://ermactually.kirugames.com` on the team's DigitalOcean droplet. [`docs/friend-handoff.md`](docs/friend-handoff.md) is the step-by-step to finish or redeploy it. [`docs/demo-and-deployment.md`](docs/demo-and-deployment.md) covers a from-scratch setup, the lab demo with Postman/ARC, and the SwaggerHub presentation; templates for systemd and nginx are in [`deploy/`](deploy/). [`docs/lab-demo-script.md`](docs/lab-demo-script.md) is the lab check-in script.
+
+### Account preferences
+
+`GET /api/v1/me`, login, and `PATCH /api/v1/me` return a `settings` object. Existing
+accounts receive defaults without a migration. PATCH accepts a display name (0-80
+characters after trimming), a nonempty partial `settings` object, or both. The
+profile and preferences save in one MongoDB update. Unspecified preferences are
+preserved, and unknown fields, invalid enum values, noninteger/out-of-range focus
+lengths, and email changes are rejected. Ownership comes from the verified JWT.
+
+Example PATCH body:
+```json
+{"displayName":"Sebastian","settings":{"focusMinutes":45,"weekStartsOn":"Monday"}}
+```
+
+Focus/break lengths affect future web timers, and week start affects the web
+calendar. Email reminders, daily summaries, default calendar views, and time-zone
+overrides are reserved preferences only; no background email job is added here.
+The web disables those controls and keeps the verified login email read-only.
+Mobile clients can use this additive contract without changing existing requests.

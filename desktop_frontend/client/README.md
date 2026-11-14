@@ -37,7 +37,7 @@ Tasks, Milestones and Calendar share the signed-in user's API records with the d
 completion, milestone creation and progress persist in MongoDB. All three pages use `/api/v1/search`
 for partial title searches of two or more characters. Undated, overdue and due-today tasks appear
 in the current work list; future tasks appear in Upcoming. Calendar maps saved due dates into local
-calendar days; undated tasks appear today and undated milestones stay on the Milestones page. Persistent Settings remain separate integration work.
+calendar days; undated tasks appear today and undated milestones stay on the Milestones page. Settings now persist per account through the profile API.
 
 Run the real-browser regression suite from `desktop_frontend/client`:
 
@@ -73,13 +73,31 @@ retryable. The countdown uses a deadline so throttled browser callbacks do not l
 time. Returning to the app reconciles the active session with changes from another device.
 Completed focus blocks refresh the dashboard's focus statistics.
 
-The timer reads current local Settings for future focus/break lengths. An already-started focus
+The timer reads saved account Settings for future focus/break lengths. An already-started focus
 block retains its server target. Breaks are local, do not create focus records, and stay shared
-between pages; refreshing the browser resets a local break. Settings themselves are not yet
-persisted to the server. After each focus block a short/long break starts; after a break the next
+between pages; refreshing the browser resets a local break. Settings persist per account through the profile API. After each focus block a short/long break starts; after a break the next
 focus block waits for Start.
 
 The browser suite covers session lifecycle and navigation, reload recovery, failed writes and
-retries, completion/history/statistics, account isolation, another device's session, local
+retries, completion/history/statistics, account isolation, another device's session, saved
 settings and long-break selection, paginated history, and delayed timer callbacks. Its elapsed
 session fixtures exist only on the loopback test server and temporary database.
+
+### Account Settings
+
+The Settings form saves display name and preferences together through `PATCH /me`.
+Only a successful API response updates the signed-in profile, calendar week start,
+and future timer durations. Saved values survive reloads and appear on a fresh login
+from another device. Saving disables editing; failures preserve the draft and offer
+another save attempt. A 401 returns to login. Existing active focus blocks keep
+their original target duration.
+
+Email is read-only because changing a verified login address requires a separate
+verification flow. Reminder delivery, daily summaries, calendar view selection, and
+time-zone overrides are not implemented; those controls are disabled with explanatory
+text. The bell continues to use the existing upcoming-deadline logic. Calendar dates
+use the device time zone and the calendar remains a Month view.
+
+`tests/settings.spec.ts` covers persistence across reloads and browsers, isolation
+between accounts, failed writes/retry, pending saves, expired sessions, and delayed responses after logout. API tests
+also cover legacy defaults, partial updates, atomic validation, and rejected fields.

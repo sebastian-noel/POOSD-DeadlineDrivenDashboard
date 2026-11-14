@@ -137,7 +137,7 @@ test('a session opened on another device is adopted and returning to the app rec
   await expect(page.getByRole('timer')).toHaveText(/^(09:5[0-9]|10:00)$/);
 });
 
-test('local settings set target lengths and long breaks follow completed focus blocks', async ({ page }) => {
+test('saved settings set target lengths and long breaks follow completed focus blocks', async ({ page }) => {
   const headers = await signIn(page);
   await navigate(page, 'Settings');
   await page.getByLabel('Focus length', { exact: true }).fill('1');
@@ -145,6 +145,7 @@ test('local settings set target lengths and long breaks follow completed focus b
   await page.getByLabel('Long break', { exact: true }).fill('3');
   await page.getByLabel('Long break after', { exact: true }).fill('1');
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByText('Settings saved', { exact: true })).toBeVisible();
   await navigate(page, 'Focus timer');
   await expect(page.getByRole('timer')).toHaveText('01:00');
   await page.getByRole('button', { name: 'Start', exact: true }).click();

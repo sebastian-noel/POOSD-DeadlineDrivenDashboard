@@ -14,6 +14,7 @@ import { searchRoutes } from './routes/search.js'
 import { dashboardRoutes } from './routes/dashboard.js'
 import { focusSessionRoutes } from './routes/focus-sessions.js'
 import { User } from './models/user.js'
+import { accountSummary, settingsInputSchema } from './lib/settings.js'
 import mongoose from 'mongoose'
 
 export function createApp(config: Config, mailer: Mailer = createMailer(config)) {
@@ -34,17 +35,33 @@ export function createApp(config: Config, mailer: Mailer = createMailer(config))
 
   app.use('/api/v1/auth', authRoutes(config, mailer))
   app.use('/api/v1/contact', contactRoutes(mailer))
-  app.get('/api/v1/me', requireAuth(config), (req, res) => {
-    res.json({ id: req.userId, email: req.userEmail, displayName: req.userDisplayName })
+  app.get('/api/v1/me', requireAuth(config), async (req, res) => {
+    const user = await User.findById(req.userId)
+    if (!user) {
+      res.status(401).json({ error: 'UNAUTHORIZED' })
+      return
+    }
+    res.json(accountSummary(user))
   })
   app.patch('/api/v1/me', requireAuth(config), async (req, res) => {
-    const parsed = z.object({ displayName: z.string().trim().min(1).max(80) }).strict().safeParse(req.body)
+    const parsed = z.object({
+      displayName: z.string().trim().max(80).optional(),
+      settings: settingsInputSchema.partial().refine((value) => Object.keys(value).length > 0, 'Provide at least one preference').optional(),
+    }).strict().refine((value) => Object.keys(value).length > 0, 'Provide a profile field to update').safeParse(req.body)
     if (!parsed.success) {
       validationError(res, parsed.error)
       return
     }
-    const user = await User.findByIdAndUpdate(req.userId, { $set: parsed.data }, { new: true, runValidators: true })
-    res.json({ id: user?._id.toString(), email: user?.email, displayName: user?.displayName })
+    // Dot paths preserve preferences omitted by older or mobile clients. One write saves profile and preferences atomically.
+    const update: Record<string, unknown> = {}
+    if (parsed.data.displayName !== undefined) update.displayName = parsed.data.displayName
+    for (const [key, value] of Object.entries(parsed.data.settings ?? {})) update[`settings.${key}`] = value
+    const user = await User.findByIdAndUpdate(req.userId, { $set: update }, { new: true, runValidators: true })
+    if (!user) {
+      res.status(401).json({ error: 'UNAUTHORIZED' })
+      return
+    }
+    res.json(accountSummary(user))
   })
   app.use('/api/v1/milestones', requireAuth(config), milestoneRoutes())
   app.use('/api/v1/tasks', requireAuth(config), taskRoutes())
