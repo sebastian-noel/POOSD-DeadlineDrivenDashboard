@@ -4,8 +4,9 @@ import { SessionDots, TimerControls, TimerRing, WorkingOn } from '../../componen
 import { NotificationsMenu } from '../../components/NotificationsMenu';
 import { PageHeader } from '../../components/PageHeader';
 import { SearchPill } from '../../components/SearchPill';
-import { FOCUS_PLAN, sampleRecentSessions } from '../../data/preferences';
-import { useFocusTimer } from '../../hooks/useFocusTimer';
+import { FocusTimerFeedback } from '../../components/FocusTimerFeedback';
+import type { FocusTimerController } from '../../hooks/useFocusTimer';
+import type { ApiTask } from '../../lib/api';
 import type { Notification, Task, TimerMode } from '../../types';
 
 const MODES: { id: TimerMode; label: string }[] = [
@@ -14,13 +15,9 @@ const MODES: { id: TimerMode; label: string }[] = [
   { id: 'long', label: 'Long break' },
 ];
 
-const PLAN_ROWS = [
-  { label: 'Focus block', minutes: FOCUS_PLAN.focusMinutes },
-  { label: 'Short break', minutes: FOCUS_PLAN.shortBreakMinutes },
-  { label: 'Long break', minutes: FOCUS_PLAN.longBreakMinutes },
-];
-
 interface FocusTimerPageProps {
+  timer: FocusTimerController;
+  tasks: ApiTask[];
   currentTask?: Task;
   onOpenSettings: () => void;
   search: string;
@@ -34,6 +31,8 @@ interface FocusTimerPageProps {
 }
 
 export function FocusTimerPage({
+  timer,
+  tasks,
   currentTask,
   onOpenSettings,
   search,
@@ -44,12 +43,17 @@ export function FocusTimerPage({
   hasUnread,
   onOpenNotifications,
 }: FocusTimerPageProps) {
-  const timer = useFocusTimer();
+  const planRows = [
+    { label: 'Focus block', minutes: timer.hasSession ? timer.duration / 60 : timer.plan.focusMinutes },
+    { label: 'Short break', minutes: timer.plan.shortBreakMinutes },
+    { label: 'Long break', minutes: timer.plan.longBreakMinutes },
+  ];
+  const taskTitles = new Map(tasks.map((task) => [task.id, task.title]));
   const sessionHeadingId = useId();
   const planHeadingId = useId();
   const recentHeadingId = useId();
 
-  const status = timer.running
+  const status = timer.finishPending ? 'Save pending' : timer.running
     ? timer.mode === 'focus'
       ? 'In progress'
       : 'On break'
@@ -72,6 +76,7 @@ export function FocusTimerPage({
         </button>
       </PageHeader>
 
+      <FocusTimerFeedback timer={timer} />
       <div className="row g-4">
         <div className="col-12 col-xl">
           <section className="panel d-flex flex-column" style={{ gap: 24 }} aria-labelledby={sessionHeadingId}>
@@ -91,7 +96,8 @@ export function FocusTimerPage({
                     role="tab"
                     aria-selected={timer.mode === m.id}
                     className={`range-tab${timer.mode === m.id ? ' active' : ''}`}
-                    onClick={() => timer.selectMode(m.id)}
+                    onClick={() => void timer.selectMode(m.id)}
+                    disabled={timer.disabled}
                   >
                     {m.label}
                   </button>
@@ -106,8 +112,10 @@ export function FocusTimerPage({
                 <TimerControls
                   running={timer.running}
                   started={timer.started}
-                  onToggle={timer.toggle}
-                  onReset={timer.reset}
+                  onToggle={() => void timer.toggle()}
+                  onReset={() => void timer.reset()}
+                  disabled={timer.disabled}
+                  finishPending={timer.finishPending}
                 />
                 <div className="d-flex align-items-center justify-content-between">
                   <span className="t-body-bold">{timer.sessionLabel}</span>
@@ -123,10 +131,10 @@ export function FocusTimerPage({
             <h2 id={planHeadingId} className="t-heading m-0">
               Session plan
             </h2>
-            <WorkingOn task={currentTask} />
+            <WorkingOn task={currentTask} hasSession={timer.hasSession} />
             <hr className="divider-subtle" />
             <dl className="m-0 d-flex flex-column" style={{ gap: 12 }}>
-              {PLAN_ROWS.map((row) => (
+              {planRows.map((row) => (
                 <div key={row.label} className="d-flex align-items-center justify-content-between">
                   <dt className="t-body text-ink-secondary">{row.label}</dt>
                   <dd className="t-body-bold m-0">{row.minutes} min</dd>
@@ -140,15 +148,18 @@ export function FocusTimerPage({
               Recent sessions
             </h2>
             <ul className="recent-sessions list-unstyled m-0">
-              {sampleRecentSessions.map((s) => (
+              {timer.recentSessions.map((s) => (
                 <li key={s.id} className="d-flex align-items-center justify-content-between gap-3">
                   <div className="d-flex flex-column" style={{ gap: 2, minWidth: 0 }}>
-                    <span className="t-body-bold text-truncate">{s.title}</span>
-                    <span className="t-caption text-ink-secondary">{s.when}</span>
+                    <span className="t-body-bold text-truncate">{taskTitles.get(s.taskId ?? '') ?? 'Focus session'}</span>
+                    <span className="t-caption text-ink-secondary">{new Date(s.completedAt!).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
                   </div>
-                  <span className="t-caption-bold text-nowrap">{s.minutes} min</span>
+                  <span className="t-caption-bold text-nowrap">{Math.round(s.elapsedSeconds / 60)} min</span>
                 </li>
               ))}
+              {!timer.loading && timer.recentSessions.length === 0 && (
+                <li className="t-body text-ink-secondary">No completed focus sessions yet.</li>
+              )}
             </ul>
           </section>
         </div>

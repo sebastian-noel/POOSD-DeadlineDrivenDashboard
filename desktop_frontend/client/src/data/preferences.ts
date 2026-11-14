@@ -1,19 +1,12 @@
-import type { CalendarView, FocusSessionLog, UserSettings, WeekStart } from '../types';
+import type { CalendarView, UserSettings, WeekStart } from '../types';
 
-/** Pomodoro lengths used by the Focus timer page. Not connected to saved Settings yet. */
+/** Starting Pomodoro lengths; the shared timer uses the current Settings values. */
 export const FOCUS_PLAN = {
   focusMinutes: 25,
   shortBreakMinutes: 5,
   longBreakMinutes: 15,
   longBreakAfterSessions: 4,
 };
-
-/** Placeholder rows for the Focus timer page until it reads sessions from the API. */
-export const sampleRecentSessions: FocusSessionLog[] = [
-  { id: 's1', title: 'Outline section 2.3', when: 'Today · 10:00 AM', minutes: 25 },
-  { id: 's2', title: 'Read 2 assigned papers', when: 'Yesterday · 3:00 PM', minutes: 25 },
-  { id: 's3', title: 'Answer Q1–Q3', when: 'Yesterday · 1:30 PM', minutes: 25 },
-];
 
 export const REMINDER_OPTIONS = ['1 hour before', '3 hours before', '1 day before', '2 days before', '1 week before'];
 

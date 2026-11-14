@@ -1,3 +1,4 @@
+import type { FocusTimerController } from '../../hooks/useFocusTimer';
 import { useEffect, useMemo, useState } from 'react';
 import { Spinner } from 'react-bootstrap';
 import type { DashboardData } from '../../hooks/useDashboardData';
@@ -11,7 +12,7 @@ import {
   toUiTasks,
 } from '../../lib/dashboardModel';
 import { todayLabel } from '../../lib/dates';
-import type { DeadlineRange, Notification, Page } from '../../types';
+import type { DeadlineRange, Notification, Page, Task } from '../../types';
 import { DeadlinesCard } from './DeadlinesCard';
 import { FocusTimer } from './FocusTimer';
 import { Greeting } from './Greeting';
@@ -36,6 +37,8 @@ interface SearchMatch {
 }
 
 interface DashboardPageProps {
+  timer: FocusTimerController;
+  focusTask?: Task;
   user: ApiUser;
   data: DashboardData;
   onNewTask: () => void;
@@ -51,6 +54,8 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({
+  timer,
+  focusTask,
   user,
   data,
   onNewTask,
@@ -109,7 +114,6 @@ export function DashboardPage({
   });
 
   const doneCount = tasks.filter((t) => t.done).length;
-  const currentTask = tasks.find((t) => !t.done);
   const upcomingThisWeek = deadlines.filter((d) => d.daysUntil <= 7).length;
   const userName = user.displayName || user.email.split('@')[0] || 'there';
 
@@ -177,7 +181,7 @@ export function DashboardPage({
           <DeadlinesCard deadlines={visibleDeadlines} range={range} onRangeChange={setRange} />
         </div>
         <div className="col-12 col-xl-auto col-side">
-          <FocusTimer currentTask={currentTask} onSessionComplete={data.refreshSummary} />
+          <FocusTimer currentTask={focusTask} timer={timer} />
         </div>
       </div>
 

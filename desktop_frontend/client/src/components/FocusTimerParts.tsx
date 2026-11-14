@@ -1,4 +1,4 @@
-import { formatTime } from '../hooks/useFocusTimer';
+import { formatTime } from '../lib/focusTimerModel';
 import type { Task, TimerMode } from '../types';
 import { Icon, PlayIcon } from './Icon';
 
@@ -76,16 +76,16 @@ export function SessionDots({ total, completed }: { total: number; completed: nu
   );
 }
 
-export function WorkingOn({ task }: { task?: Task }) {
+export function WorkingOn({ task, hasSession = false }: { task?: Task; hasSession?: boolean }) {
   return (
     <div className="d-flex flex-column" style={{ gap: 8 }}>
       <span className="t-overline text-ink-secondary">WORKING ON</span>
       <div className="pill current-task">
         <Icon name="flag" />
         <div className="d-flex flex-column overflow-hidden" style={{ gap: 1 }}>
-          <span className="t-body-bold text-truncate">{task ? task.label : 'Nothing left for today'}</span>
+          <span className="t-body-bold text-truncate">{task ? task.label : hasSession ? 'Focus session' : 'Nothing left for today'}</span>
           <span className="t-caption text-ink-secondary text-truncate">
-            {task ? task.context : 'Add a task to keep the streak going'}
+            {task ? task.context : hasSession ? 'No task linked to this session' : 'Add a task to keep the streak going'}
           </span>
         </div>
       </div>
@@ -98,19 +98,23 @@ export function TimerControls({
   started,
   onToggle,
   onReset,
+  disabled = false,
+  finishPending = false,
 }: {
   running: boolean;
   started: boolean;
   onToggle: () => void;
   onReset: () => void;
+  disabled?: boolean;
+  finishPending?: boolean;
 }) {
   return (
     <div className="d-flex align-items-center timer-controls" style={{ gap: 10 }}>
-      <button type="button" className="btn-pill btn-pill-ink flex-grow-1" onClick={onToggle}>
+      <button type="button" className="btn-pill btn-pill-ink flex-grow-1" onClick={onToggle} disabled={disabled}>
         {running ? <Icon name="pause" /> : <PlayIcon />}
-        {running ? 'Pause' : started ? 'Resume' : 'Start'}
+        {finishPending ? 'Retry save' : running ? 'Pause' : started ? 'Resume' : 'Start'}
       </button>
-      <button type="button" className="icon-btn reset-btn" aria-label="Reset timer" onClick={onReset}>
+      <button type="button" className="icon-btn reset-btn" aria-label="Reset timer" onClick={onReset} disabled={disabled}>
         <Icon name="reset" />
       </button>
     </div>
