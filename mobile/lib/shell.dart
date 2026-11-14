@@ -31,6 +31,7 @@ class PageCtx {
   DashboardData get data => shell.data;
   FocusTimerController get timer => shell.timer;
   UserSettings get settings => shell.settings;
+  bool get savingSettings => shell.savingSettings;
   String get search => shell.search;
   void setSearch(String v) => shell.setSearch(v);
   void navigate(AppPage p) => shell.navigate(p);
@@ -45,9 +46,17 @@ class PageCtx {
 }
 
 class SignedInShell extends StatefulWidget {
-  const SignedInShell({super.key, required this.user, required this.settings, required this.onLogout, required this.onSessionExpired});
+  const SignedInShell({
+    super.key,
+    required this.user,
+    required this.settings,
+    required this.onProfileSaved,
+    required this.onLogout,
+    required this.onSessionExpired,
+  });
   final ApiUser user;
   final UserSettings settings;
+  final ValueChanged<ApiUser> onProfileSaved;
   final VoidCallback onLogout;
   final VoidCallback onSessionExpired;
 
@@ -61,6 +70,7 @@ class SignedInShellState extends State<SignedInShell> {
   String search = '';
   final dismissed = <String>{};
   bool hasUnread = true;
+  bool savingSettings = false;
 
   late final DashboardData data = DashboardData(widget.onSessionExpired);
   late UserSettings settings = widget.settings;
@@ -102,10 +112,23 @@ class SignedInShellState extends State<SignedInShell> {
   }
 
   Future<void> saveSettings(UserSettings s) async {
-    setState(() => settings = s);
-    timer.updateSettings(s);
-    await s.save(widget.user);
-    if (mounted) showToast(context, 'Settings saved');
+    if (savingSettings) return;
+    final token = Session.token;
+    setState(() => savingSettings = true);
+    try {
+      final saved = await AuthApi.updateProfile(displayName: s.get<String>('displayName').trim(), settings: s.preferences);
+      // Discard replies after logout or an account switch.
+      if (!mounted || Session.token != token) return;
+      setState(() => settings = UserSettings.fromUser(saved));
+      timer.updateSettings(settings);
+      widget.onProfileSaved(saved);
+      showToast(context, 'Settings saved');
+    } on ApiError catch (error) {
+      if (mounted && Session.token == token && error.status == 401) widget.onSessionExpired();
+      rethrow;
+    } finally {
+      if (mounted) setState(() => savingSettings = false);
+    }
   }
 
   Future<DateTime?> openNewTask() async {
@@ -126,7 +149,7 @@ class SignedInShellState extends State<SignedInShell> {
       AppPage.milestones => MilestonesPage(ctx),
       AppPage.tasks => TasksPage(ctx),
       AppPage.focus => FocusPage(ctx),
-      AppPage.settings => SettingsPage(ctx),
+      AppPage.settings => SettingsPage(ctx, key: ObjectKey(settings)),
       AppPage.calendar => CalendarPage(ctx),
     };
   }

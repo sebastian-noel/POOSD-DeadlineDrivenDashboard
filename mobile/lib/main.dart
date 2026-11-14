@@ -68,7 +68,7 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _signIn(ApiUser user, {bool welcome = true}) async {
-    final settings = await UserSettings.load(user);
+    final settings = UserSettings.fromUser(user);
     if (!mounted) return;
     setState(() {
       _user = user;
@@ -76,6 +76,14 @@ class _AuthGateState extends State<AuthGate> {
       _loginNotice = null;
     });
     if (welcome) showToast(context, 'Welcome back${user.displayName.isNotEmpty ? ', ${user.displayName}' : ''}!');
+  }
+
+  void _profileSaved(ApiUser user) {
+    if (!mounted || _user?.id != user.id) return;
+    setState(() {
+      _user = user;
+      _settings = UserSettings.fromUser(user);
+    });
   }
 
   Future<void> _signOut({Notice? notice, String? toast}) async {
@@ -101,6 +109,7 @@ class _AuthGateState extends State<AuthGate> {
       key: ValueKey(user.id),
       user: user,
       settings: _settings!,
+      onProfileSaved: _profileSaved,
       onLogout: () => _signOut(toast: 'Logged out successfully'),
       onSessionExpired: () => _signOut(notice: const Notice(NoticeKind.info, 'Your session expired. Please log in again.')),
     );

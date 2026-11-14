@@ -333,27 +333,29 @@ class _MilestoneChip extends StatelessWidget {
     final color = _chipColor(status);
     final at = status == MilestoneStatus.atRisk;
     final side = BorderSide(color: at ? color : Colors.transparent, width: 1.5);
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 6, vertical: small ? 0 : 3),
-      decoration: BoxDecoration(
-        color: _chipTint(status),
-        borderRadius: BorderRadius.circular(5),
-        border: Border(
-          left: BorderSide(color: color, width: 3),
-          top: side,
-          right: side,
-          bottom: side,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(5),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 6, vertical: small ? 0 : 3),
+        decoration: BoxDecoration(
+          color: _chipTint(status),
+          border: Border(
+            left: BorderSide(color: color, width: 3),
+            top: side,
+            right: side,
+            bottom: side,
+          ),
         ),
-      ),
-      child: Text(
-        title,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: T.captionBold.copyWith(
-          fontSize: small ? 12 : 13,
-          decoration: status == MilestoneStatus.completed ? TextDecoration.lineThrough : null,
-          decorationColor: Ink2.muted,
-          decorationThickness: 1.5,
+        child: Text(
+          title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: T.captionBold.copyWith(
+            fontSize: small ? 12 : 13,
+            decoration: status == MilestoneStatus.completed ? TextDecoration.lineThrough : null,
+            decorationColor: Ink2.muted,
+            decorationThickness: 1.5,
+          ),
         ),
       ),
     );
