@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { plannerProgress } from '../lib/plannerModel';
 import {
   ApiError,
   dashboardApi,
@@ -24,8 +25,8 @@ interface Loaded {
 }
 
 async function loadAll(): Promise<Loaded> {
-  const [taskPage, milestonePage, summary] = await Promise.all([tasksApi.list(), milestonesApi.list(), dashboardApi.summary()]);
-  return { tasks: taskPage.items, milestones: milestonePage.items, summary };
+  const [tasks, milestones, summary] = await Promise.all([tasksApi.listAll(), milestonesApi.listAll(), dashboardApi.summary()]);
+  return { tasks, milestones, summary };
 }
 
 export interface DashboardData {
@@ -38,6 +39,8 @@ export interface DashboardData {
   refreshSummary: () => Promise<void>;
   toggleTask: (id: string) => Promise<void>;
   createTask: (input: NewTaskInput) => Promise<void>;
+  createMilestone: (input: { title: string; dueAt: string | null }) => Promise<void>;
+  pendingTaskIds: ReadonlySet<string>;
 }
 
 /**
@@ -49,6 +52,8 @@ export function useDashboardData(onSessionExpired: () => void): DashboardData {
   const [milestones, setMilestones] = useState<ApiMilestone[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const pendingTasks = useRef(new Set<string>());
+  const [pendingTaskIds, setPendingTaskIds] = useState<ReadonlySet<string>>(() => new Set());
   const [error, setError] = useState<string | null>(null);
 
   const fail = useCallback(
@@ -109,21 +114,28 @@ export function useDashboardData(onSessionExpired: () => void): DashboardData {
   const toggleTask = useCallback(
     async (id: string) => {
       const task = tasks.find((t) => t.id === id);
-      if (!task) return;
+      if (!task || pendingTasks.current.has(id)) return;
+      pendingTasks.current.add(id);
+      setPendingTaskIds(new Set(pendingTasks.current));
       const status = task.status === 'done' ? 'todo' : 'done';
       // Optimistic update; the server is the source of truth if the request fails.
       setTasks((prev) =>
         prev.map((t) => (t.id === id ? { ...t, status, completedAt: status === 'done' ? new Date().toISOString() : null } : t)),
       );
       try {
-        await tasksApi.update(id, { status });
+        const saved = await tasksApi.update(id, { status });
+        setTasks((prev) => prev.map((item) => (item.id === id ? saved : item)));
+        setError(null);
         await refreshSummary();
       } catch (e) {
+        setTasks((prev) => prev.map((item) => (item.id === id ? task : item)));
         fail(e);
-        void refresh();
+      } finally {
+        pendingTasks.current.delete(id);
+        setPendingTaskIds(new Set(pendingTasks.current));
       }
     },
-    [tasks, fail, refresh, refreshSummary],
+    [tasks, fail, refreshSummary],
   );
 
   const createTask = useCallback(
@@ -144,5 +156,27 @@ export function useDashboardData(onSessionExpired: () => void): DashboardData {
     [refresh, onSessionExpired],
   );
 
-  return { tasks, milestones, summary, loading, error, refresh, refreshSummary, toggleTask, createTask };
+  const createMilestone = useCallback(
+    async (input: { title: string; dueAt: string | null }) => {
+      try {
+        await milestonesApi.create(input);
+        await refresh();
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 401) onSessionExpired();
+        throw e;
+      }
+    },
+    [refresh, onSessionExpired],
+  );
+
+  // The summary endpoint limits its milestone list. All pages need the complete shared list.
+  const sharedSummary = useMemo(
+    () => summary ? { ...summary, milestones: plannerProgress(milestones, tasks) } : null,
+    [summary, milestones, tasks],
+  );
+
+  return {
+    tasks, milestones, summary: sharedSummary, loading, error,
+    refresh, refreshSummary, toggleTask, createTask, createMilestone, pendingTaskIds,
+  };
 }

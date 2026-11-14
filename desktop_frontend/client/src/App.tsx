@@ -7,6 +7,7 @@ import { PlaceholderPage } from './components/PlaceholderPage';
 import { TopNav } from './components/TopNav';
 import { defaultSettings } from './data/preferences';
 import { useDashboardData, type NewTaskInput } from './hooks/useDashboardData';
+import { usePlannerSearch } from './hooks/usePlannerSearch';
 import { authApi, session, type ApiUser } from './lib/api';
 import { buildNotifications, milestoneTitles, toDeadlines, toUiMilestones, toUiTasks } from './lib/dashboardModel';
 import { CalendarPage } from './pages/calendar/CalendarPage';
@@ -64,6 +65,7 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
     email: user.email,
   }));
   const data = useDashboardData(onSessionExpired);
+  const matches = usePlannerSearch(page === 'Tasks' || page === 'Milestones' ? search : '', data.tasks, data.milestones, onSessionExpired);
 
   // Built here, not in DashboardPage, so the bell on every page shows the same list.
   const titles = useMemo(() => milestoneTitles(data.milestones), [data.milestones]);
@@ -114,6 +116,8 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
         />
       ) : page === 'Milestones' ? (
         <MilestonesPage
+          data={data}
+          matches={matches}
           search={search}
           onSearchChange={setSearch}
           notifications={notifications}
@@ -125,6 +129,8 @@ function AuthenticatedApp({ user, onLogout, onSessionExpired, notify }: Authenti
         />
       ) : page === 'Tasks' ? (
         <TasksPage
+          data={data}
+          matches={matches}
           search={search}
           onSearchChange={setSearch}
           notifications={notifications}

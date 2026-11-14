@@ -5,9 +5,12 @@ import { NewMilestoneModal, type NewMilestoneInput } from '../../components/NewM
 import { NotificationsMenu } from '../../components/NotificationsMenu';
 import { PageHeader } from '../../components/PageHeader';
 import { SearchPill } from '../../components/SearchPill';
-import { sampleMilestones, sampleNextMilestone } from '../../data/sampleMilestones';
-import { formatShortDate } from '../../lib/dates';
-import type { Milestone, NextMilestone, Notification, Page } from '../../types';
+import { PlannerFeedback } from '../../components/PlannerFeedback';
+import type { DashboardData } from '../../hooks/useDashboardData';
+import type { PlannerSearch } from '../../hooks/usePlannerSearch';
+import { plannerProgress, nextMilestone } from '../../lib/plannerModel';
+import { toUiMilestones } from '../../lib/dashboardModel';
+import type { NextMilestone, Notification, Page } from '../../types';
 import { MilestoneRow } from '../dashboard/MilestonesCard';
 import { TaskRow } from '../dashboard/TasksCard';
 
@@ -21,13 +24,12 @@ const FILTERS: { id: MilestoneFilter; label: string }[] = [
 
 interface NextDueCardProps {
   milestone: NextMilestone;
-  /** Ids of remaining tasks ticked off on this page. */
-  checkedIds: ReadonlySet<string>;
+  pendingTaskIds: ReadonlySet<string>;
   onToggleTask: (id: string) => void;
   onOpenTasks: () => void;
 }
 
-function NextDueCard({ milestone, checkedIds, onToggleTask, onOpenTasks }: NextDueCardProps) {
+function NextDueCard({ milestone, pendingTaskIds, onToggleTask, onOpenTasks }: NextDueCardProps) {
   const headingId = useId();
 
   return (
@@ -60,7 +62,7 @@ function NextDueCard({ milestone, checkedIds, onToggleTask, onOpenTasks }: NextD
         <div className="d-flex align-items-center justify-content-between gap-3">
           <dt className="t-body text-ink-secondary">Tasks finished</dt>
           <dd className="t-body-bold m-0">
-            {milestone.completedTasks + checkedIds.size} of {milestone.totalTasks}
+            {milestone.completedTasks} of {milestone.totalTasks}
           </dd>
         </div>
       </dl>
@@ -71,7 +73,7 @@ function NextDueCard({ milestone, checkedIds, onToggleTask, onOpenTasks }: NextD
         <h3 className="t-title m-0">Remaining tasks</h3>
         <ul className="task-list task-list-ruled list-unstyled m-0">
           {milestone.remainingTasks.map((task) => (
-            <TaskRow key={task.id} task={{ ...task, done: checkedIds.has(task.id) }} onToggle={onToggleTask} />
+            <TaskRow key={task.id} task={task} onToggle={onToggleTask} disabled={pendingTaskIds.has(task.id)} />
           ))}
         </ul>
       </div>
@@ -86,6 +88,8 @@ function NextDueCard({ milestone, checkedIds, onToggleTask, onOpenTasks }: NextD
 }
 
 interface MilestonesPageProps {
+  data: DashboardData;
+  matches: PlannerSearch;
   search: string;
   onSearchChange: (value: string) => void;
   notifications: Notification[];
@@ -98,10 +102,11 @@ interface MilestonesPageProps {
 }
 
 /**
- * Front-end design of the Milestones page. It runs on sample data and keeps changes
- * (new milestones, ticked tasks) in the browser only; the API team will connect it.
+ * Milestones and their progress are derived from the shared API records.
  */
 export function MilestonesPage({
+  data,
+  matches,
   search,
   onSearchChange,
   notifications,
@@ -111,9 +116,10 @@ export function MilestonesPage({
   onNavigate,
   notify,
 }: MilestonesPageProps) {
-  const [milestones, setMilestones] = useState<Milestone[]>(sampleMilestones);
+  const progress = plannerProgress(data.milestones, data.tasks);
+  const milestones = toUiMilestones(progress);
+  const next = nextMilestone(progress, data.tasks);
   const [filter, setFilter] = useState<MilestoneFilter>('all');
-  const [checkedIds, setCheckedIds] = useState<ReadonlySet<string>>(() => new Set());
   const [showNewMilestone, setShowNewMilestone] = useState(false);
   const listHeadingId = useId();
 
@@ -121,7 +127,7 @@ export function MilestonesPage({
   const visible = milestones.filter(
     (m) =>
       (filter === 'all' || (filter === 'completed') === (m.status === 'Completed')) &&
-      (!query || m.title.toLowerCase().includes(query)),
+      (matches.milestoneIds === null || matches.milestoneIds.has(m.id)),
   );
   const atRisk = milestones.filter((m) => m.status === 'At risk').length;
 
@@ -133,31 +139,15 @@ export function MilestonesPage({
         ? 'Every milestone is finished.'
         : 'No milestones yet. Add one with New milestone.';
 
-  const toggleTask = (id: string) =>
-    setCheckedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const toggleTask = (id: string) => void data.toggleTask(id);
 
-  // New milestones go after the unfinished ones, before the completed ones.
-  const addMilestone = ({ title, dueAt }: NewMilestoneInput) => {
-    const added: Milestone = {
-      id: `new-${Date.now()}`,
-      title,
-      status: 'On track',
-      detail: `${dueAt ? `Due ${formatShortDate(dueAt)}` : 'No due date'} · 0 of 0 tasks`,
-      percent: 0,
-    };
-    setMilestones((prev) => {
-      const firstDone = prev.findIndex((m) => m.status === 'Completed');
-      const at = firstDone === -1 ? prev.length : firstDone;
-      return [...prev.slice(0, at), added, ...prev.slice(at)];
-    });
+  const addMilestone = async (input: NewMilestoneInput) => {
+    await data.createMilestone(input);
     setShowNewMilestone(false);
-    notify(`Added the “${title}” milestone`);
+    notify(`Added the “${input.title}” milestone`);
   };
+
+  if (data.loading || (data.error && !data.summary)) return <PlannerFeedback data={data} matches={matches} />;
 
   return (
     <>
@@ -178,6 +168,7 @@ export function MilestonesPage({
         </button>
       </PageHeader>
 
+      <PlannerFeedback data={data} matches={matches} />
       <div className="row g-4">
         <div className="col-12 col-xl">
           <section className="panel d-flex flex-column" style={{ gap: 24 }} aria-labelledby={listHeadingId}>
@@ -204,18 +195,25 @@ export function MilestonesPage({
               {visible.map((m) => (
                 <MilestoneRow key={m.id} milestone={m} />
               ))}
-              {visible.length === 0 && <li className="t-body text-ink-secondary py-4 text-center">{emptyText}</li>}
+              {visible.length === 0 && <li className="t-body text-ink-secondary py-4 text-center">{matches.searching ? 'Searching milestones...' : matches.error ? 'Search is unavailable.' : emptyText}</li>}
             </ul>
           </section>
         </div>
 
         <div className="col-12 col-xl-auto col-side col-side-exact">
-          <NextDueCard
-            milestone={sampleNextMilestone}
-            checkedIds={checkedIds}
-            onToggleTask={toggleTask}
-            onOpenTasks={() => onNavigate('Tasks')}
-          />
+          {next ? (
+            <NextDueCard
+              milestone={next}
+              pendingTaskIds={data.pendingTaskIds}
+              onToggleTask={toggleTask}
+              onOpenTasks={() => onNavigate('Tasks')}
+            />
+          ) : (
+            <section className="panel">
+              <h2 className="t-heading">Next due</h2>
+              <p className="t-body text-ink-secondary m-0">No unfinished milestones with a due date.</p>
+            </section>
+          )}
         </div>
       </div>
 
